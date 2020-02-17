@@ -1,30 +1,45 @@
+#' ---
+#' title: CARRA Analysis
+#' author: Abhijit Dasgupta, PhD
+#' date: "`r format(Sys.time(), '%B %d, %Y %I:%m %p')`"
+#' output_format: html_document
+#' ---
+#'
+#+ preamble, include = FALSE
 library(readxl)
 library(tidyverse)
+library(data.table)
 library(glue)
 library(fs)
+library(here)
 
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE,
+                      cache = TRUE)
+#'
+#+ data_date_version
 # Documenting version of data we're using ---------------------------------
-data_date <- tibble(fname = dir_ls('data/raw', glob = '*.zip')) %>%
-  separate(fname, c('p1','p2','dt','tm'), sep = '_', remove = T) %>%
+data_date <- tibble(fname = dir_ls(here('data/raw'), glob = '*.zip')) %>%
+  separate(fname, c('p1','p2','dt','tm'), sep = '_', remove = T) %>% # Grabbing metadata from file names
   select(-p1, -p2) %>%
   mutate(tm = str_remove(tm, '.zip'),
          tm = as.numeric(tm)) %>% #,
          # tm = substr(as.POSIXct(sprintf('%4.0f', tm), format = "%H%M"), 12,16)) %>%
-  arrange(desc(dt), desc(tm)) %>%
-  slice(1)
-glue_data(data_date, "The version of data we're using is from {dt} {substr(as.POSIXct(as.character(tm), format = '%H%M'), 12,16)}")
+  arrange(desc(dt), desc(tm)) %>% # arrange in descending order
+  slice(1) # Take the first row, i.e. the latest date
 
+#' **Data version:** The version of data we're using is from `r glue_data(data_date, '{dt} {substr(as.POSIXct(as.character(tm), format="%H%M"),12,16)}')`.
 
 # reading data dictionary -------------------------------------------------
 
-data_dict <- read_excel('background/f-6-337-13136911_ZH2vHUc6_111319_CARRA_Registry_11.0_DataDictionary_DCRI_SxxX.xlsx')
+data_dict <- read_excel(here('background/f-6-337-13136911_ZH2vHUc6_111319_CARRA_Registry_11.0_DataDictionary_DCRI_SxxX.xlsx'))
 names(data_dict) = make.names(names(data_dict))
 
-write.table(data_dict, sep = '\t', file = 'background/f-6-337-13136911_ZH2vHUc6_111319_CARRA_Registry_11.0_DataDictionary_DCRI_SxxX.tsv')
+write.table(data_dict, sep = '\t', file = here('background/f-6-337-13136911_ZH2vHUc6_111319_CARRA_Registry_11.0_DataDictionary_DCRI_SxxX.tsv'))
 
 
 
-#' Principle 1 : 20% to 75% of children with SLE will develop nephritis
+#' ## Principle 1 : 20% to 75% of children with SLE will develop nephritis
+#'
 #' From the data dictionary, this question is answered in SLICC
 #' Re-define Yes as
 #' Either/or WHO2-6, ISNRPS2-6 = LN
@@ -33,29 +48,81 @@ write.table(data_dict, sep = '\t', file = 'background/f-6-337-13136911_ZH2vHUc6_
 glue_data(data_dict %>% filter(Variable.Name=='SLICC00'),
           'Variable {Variable.Name}: {Variable.Description}')
 
-all_rows <- read_csv('data/raw/all_rows_data_2020-01-31_1545.csv')
+all_rows <- read_csv(here('data/raw/all_rows_data_2020-01-31_1545.csv'))
 all_rows %>% filter(varName=='SLICC00') %>%
   count(conceptValue) %>%
   mutate(perc = n/sum(n)*100)
 
-#' Principle 2: 82% of LN in cSLE develops wihin the first year of diagnosis and 92% within 2 years
+#' ## Principle 2: 82% of LN in cSLE develops wihin the first year of diagnosis and 92% within 2 years
 #'
+#' ###  Data validation
+#'
+#' 1. Subjects 200 and 553 have no biopsy data (as evidenced by the biopsy data file),
+#'    but in the all_rows data their SLICC00 = 0, meaning no LN. How is this validated?
+#' 1.
 
-#' Principle 3: Membranous (class V) LN more often presents with nephrotic
+
+# New definition of LN:
+LN_ISNRPS <- all_rows %>% filter(str_detect(varName, 'ISNRPS[2-6]$'))
+LN_ISNRPS <- LN_ISNRPS %>% group_by(subjectId, eventIndex) %>%
+  summarize(ISNRPS_pos = any(conceptValue=='1')) %>%
+  right_join(LN_ISNRPS %>% select(subjectId, eventIndex, eventId, folderName, startDate) %>% distinct()) %>%
+  ungroup()
+
+LN_WHO = all_rows %>% filter(str_detect(varName, 'WHO[2-6]$'))
+LN_WHO <- LN_WHO %>% group_by(subjectId, eventIndex) %>%
+  summarize(WHO_pos = any(conceptValue=='1')) %>%
+  right_join(LN_WHO %>% select(subjectId, eventIndex, eventId, folderName, startDate) %>% distinct()) %>%
+  ungroup()
+
+LN_pos = LN_ISNRPS %>% full_join(LN_WHO) %>%
+  mutate(LN_pos = ISNRPS_pos | WHO_pos) %>%
+  select(-ISNRPS_pos, -WHO_pos)
+
+
+# First year
+
+LN_1st_yr <- LN_pos %>%
+  filter(folderName %in% c('Baseline','3 month','6 month','12 month')) %>%
+  group_by(subjectId) %>%
+  summarize(LN = any(LN_pos)) %>%
+  ungroup()
+
+#' ## Principle 3: Membranous (class V) LN more often presents with nephrotic
 #' syndrome than proliferative LN (class III or IV)
 #'
-#' Biopsy form, WHO1-6, ISNRPS1-6
-#' Either/or WHO2-6, ISNRPS2-6 = LN
+#' Class V = WHO-5 or ISNRPS-5
+#' Class III = WHO-3 or ISNRPS-3
+#' Class IV = WHO-4 or ISNRPS-4
+#' Nephrotic syndrome =
+
+compute_classes <- function(N){
+  vars <- c(paste0("WHO",N), paste0("ISNRPS",N))
+  vname <- c('LN_class'); names(vname) = paste0('LN',N)
+  out <- all_rows %>%
+    filter(varName %in% vars) %>%
+    spread(varName, conceptValue) %>%
+    distinct() %>%
+    mutate(LN_class = ifelse(eval(expr(!!sym(vars[1]) =='1' | !!sym(vars[2]) == '1')), 1, 0)) %>%
+    select(subjectId, folderName, LN_class) %>%
+    rename(!!!vname)
+  return(out)
+}
+
+LN_classes <- map(2:5, compute_classes)
 
 
 
-#' Principle 4: Short term renal outcomes are worse in blacks of African American heritage
+#' ## Principle 4: Short term renal outcomes are worse in blacks of African American heritage
 
-#' Principle 5: Short term renal outcomes are worse in patients who present with GFR < 60mL/min/1.73 m2
+#' ## Principle 5: Short term renal outcomes are worse in patients who present with GFR < 60mL/min/1.73 m2
 #' and/or nephrotic-range proteinuria (> 1 protein/creatinine ratio)
 
-#' Principle 6: Rituximab has been used as a steroid-sparing agent for induction
+#' ## Principle 6: Rituximab has been used as a steroid-sparing agent for induction
 #' in proliferative LN (LN vs no-LN, 3-4 vs 5)
+#'
+#' Rituximab use: IMMMED = 30
+#' MEDCATON = 30
 
 #' Is there differences in age/gender for people getting Rtx.
 
