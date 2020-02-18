@@ -103,10 +103,18 @@ LN_1st_yr <- LN_pos %>%
 #' ## Principle 3: Membranous (class V) LN more often presents with nephrotic
 #' syndrome than proliferative LN (class III or IV)
 #'
-#' Class V = WHO-5 or ISNRPS-5
-#' Class III = WHO-3 or ISNRPS-3
-#' Class IV = WHO-4 or ISNRPS-4
-#' Nephrotic syndrome =
+#' Definition of LN classes:
+#'
+#' 1. Class V = WHO-5 or ISNRPS-5
+#' 1. Class III = WHO-3 or ISNRPS-3
+#' 1. Class IV = WHO-4 or ISNRPS-4
+#'
+#' The definition of nephrotic syndrome is as follows:
+#'
+#' 1. The presence of nephrotic range proteinuria, which is a urine protein:creatinine ratio > 1mg/mg or if there is a 24 hour urine instead of a urine protein:creatinine ratio (different docs check it differently), it would be a 24 hour protein excretion greater than 3.5 g/24 hours.
+#' 2. Hypoalbuminemia (an albumin less than 3 g/dL)
+#' 3. On examination, documentation of edema
+#'
 
 compute_classes <- function(N){
   vars <- c(paste0("WHO",N), paste0("ISNRPS",N))
