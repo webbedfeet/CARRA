@@ -12,6 +12,8 @@ library(data.table)
 library(glue)
 library(fs)
 library(here)
+library(knitr)
+library(kableExtra)
 
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE,
                       cache = TRUE)
@@ -36,8 +38,18 @@ names(data_dict) = make.names(names(data_dict))
 
 write.table(data_dict, sep = '\t', file = here('background/f-6-337-13136911_ZH2vHUc6_111319_CARRA_Registry_11.0_DataDictionary_DCRI_SxxX.tsv'))
 
+#' ## Data exploration and validation
+#'
+#' The biopsy data is crucial to evaluating lupus nephritis (LN), but apparently
+#' has some discrepancies.
+#'
+#' The data from the biopsy file apparently are from two sources:
+#+
+biopsy <- data.table::fread(here('data/raw/biopsy_data_2020-01-31_1545.csv'))
+kable(biopsy %>% count(formName)) %>%
+  kable_styling(full_width = FALSE)
 
-
+#' <hr/>
 #' ## Principle 1 : 20% to 75% of children with SLE will develop nephritis
 #'
 #' From the data dictionary, this question is answered in SLICC
@@ -110,6 +122,13 @@ compute_classes <- function(N){
 }
 
 LN_classes <- map(2:5, compute_classes)
+
+## There seem to be some discrepancies in terms of unique data for individuals. Going
+## diving into the biopsy data
+biopsy <- data.table::fread(here('data/raw/biopsy_data_2020-01-31_1545.csv'))
+dim(distinct(biopsy[,c('subjectId','eventId')])) # 1834 2
+dim(distinct(biopsy[,c('subjectId','folderName')])) # 1820 2
+
 
 
 

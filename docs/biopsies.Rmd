@@ -1,0 +1,82 @@
+---
+title: "A question of biopsies"
+author: "Abhijit Dasgupta"
+date: "2/18/2020"
+output: 
+  html_document:
+    code_folding: hide
+
+---
+
+```{r preamble, include = F}
+library(tidyverse)
+library(data.table)
+library(broom)
+library(naniar)
+library(here)
+library(knitr)
+library(kableExtra)
+library(rmarkdown)
+```
+
+There appears to be some issue with the biopsies dataset, mainly regarding
+duplication and inconsistent dates. Since the definition of Lupus Nephritis
+is intrinsically linked to the biopsy data, this is somewhat important. 
+
+```{r input, message = F}
+biopsy <- read_csv(here('data/raw/biopsy_data_2020-01-31_1545.csv'))
+```
+
+We have data on `r length(unique(biopsy$subjectId))` individuals over `r length(unique(biopsy$folderName))` clinic visit categories. There are `r nrow(biopsy)` records in this dataset. 
+
+Let's look at whether all the data are from unique subject/visit combinations: 
+
+```{r}
+n1 <- nrow(distinct(select(biopsy, subjectId, eventId)))
+n2 <- nrow(distinct(select(biopsy, subjectId, folderName)))
+
+tribble(~Selection, ~Records,
+        "Overall", nrow(biopsy),
+        "Unique subject/event", n1,
+        "Unique subject/visit", n2) %>% 
+  kable()
+```
+
+    
+This shows that there is some duplication in the dataset, in that some subject/visit combinations are duplicated. First, lets look at the suject/event combinations.
+
+```{r duplicated1, message=F}
+biopsy_info <- biopsy %>% select(subjectId, eventId, formName, folderName, BIOPSDTC_YYYY, BIOPDTC_YYYY)
+ind <- which(duplicated(biopsy %>% select(subjectId, eventId)))
+biopsy_info[ind, c('subjectId','eventId')] %>% left_join(biopsy_info) %>% 
+  kable(caption = "**Table 1:** Duplicated data by event. BIOPSDTC = Biopsy Date, BIOPDTC = Date of collection.") %>% 
+  kable_styling(bootstrap_options = 'striped')
+```
+
+There are several things to point out from this table:
+
+1. The data from the Demographics A form is included for 28 cases, though it is generally missing. It is always duplicated with data from the Biopsy form, and correspond to the same event, so I propose to omit records from the Demographics A form
+1. For several records the collection date is after the biopsy date. This is either a question of semantics, or a problem. My interpretation is that the collection date is when the sample is collected from the person, and the biopsy date is when the pathologist actually looks at it. This needs clarity, regardless. I'll come back to this.
+
+```{r duplicated2, message = F}
+biopsy1 <- biopsy %>% dplyr::filter(formName != 'Demographics A')
+biopsy1_info <- biopsy1 %>% select(subjectId, folderName, eventId, BIOPSDTC_YYYY,
+                                   BIOPDTC_YYYY, WHO2:WHO6_RAW)
+ind <- which(duplicated(biopsy1_info %>% select(subjectId, folderName)))
+biopsy1_info[ind, c('subjectId','folderName')] %>% left_join(biopsy1_info) %>% 
+  distinct() %>% 
+  group_by(subjectId) %>% 
+  mutate_at(vars(WHO2:WHO6_RAW), ~cell_spec(., 'html', color = ifelse(length(unique(.))>1, 'red','black'))) %>% 
+  ungroup() %>% 
+  kable(format='html', escape = F, caption = '**Table 2:** Duplicated data by visit name. BIOPSDTC = Biopsy Date, BIOPDTC=Date of Collection.') %>% 
+  kable_styling(bootstrap_options = 'striped')
+```
+
+Here we see several biopsies that are all attributed to the baseline information per suject. These are also deemed as separate events. They can also have discrepant biopsy results as seen in the red entries.  
+
+1. One option is to take the later biopsy record as the baseline record. However, there are a few cases where the earlier biopsy is positive and the later is negative. Should such people be deemed positive?
+1. More generally, given the multiple records and discrepant biopsy results, how should we categorize each of these individuals as biopsy-positive or biopsy-negative for LN. 
+
+The ISNRPS data has similar discrepancies, so I just show the WHO values for demonstration purposes. 
+
+
