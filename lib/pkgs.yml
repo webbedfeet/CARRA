@@ -1,0 +1,6 @@
+- tidyverse
+- janitor
+- here
+- vroom
+- knitr
+- kableExtra

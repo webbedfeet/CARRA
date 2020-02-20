@@ -14,9 +14,7 @@
 #'
 #+ preamble, include = F
 knitr::opts_chunk$set(message = F, warning = F)
-pkgs <- c('tidyverse','janitor','here','vroom','knitr','kableExtra')
-library(pacman)
-p_load(char=pkgs)
+abhiR::reload()
 #'
 #' <hr/>
 #' # Summary
@@ -123,7 +121,9 @@ data_dict %>%
 #' # Session information
 #'
 #' This analysis was done using `r R.version$version.string` and the following packages
-tibble(pkg = pkgs) %>%
-  mutate(version = map_chr(pkg, ~as.character(packageVersion(.)))) %>%
-  kable(col.names = c('Packages','Version')) %>%
-  kable_styling(full_width = F)
+#+ packages, results = 'asis', echo = FALSE
+pkgs <- p_loaded() %>% sort()
+d <- tibble(Package = pkgs) %>%
+  mutate(Version = map(Package, p_ver) %>% map_chr(as.character))
+bl <- glue::glue_data(d, '{Package} ({Version})') %>% paste(collapse = '; ')
+cat(bl)
