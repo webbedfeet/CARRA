@@ -87,18 +87,20 @@ LN_WHO <- LN_WHO %>% group_by(subjectId, eventIndex) %>%
   right_join(LN_WHO %>% select(subjectId, eventIndex, eventId, folderName, startDate) %>% distinct()) %>%
   ungroup()
 
-LN_pos = LN_ISNRPS %>% full_join(LN_WHO) %>%
+LN_pos <-  LN_ISNRPS %>% full_join(LN_WHO) %>%
   mutate(LN_pos = ISNRPS_pos | WHO_pos) %>%
-  select(-ISNRPS_pos, -WHO_pos)
-
-
-# First year
-
-LN_1st_yr <- LN_pos %>%
-  filter(folderName %in% c('Baseline','3 month','6 month','12 month')) %>%
-  group_by(subjectId) %>%
-  summarize(LN = any(LN_pos)) %>%
-  ungroup()
+  select(-ISNRPS_pos, -WHO_pos) %>%
+  mutate(folderName = as.factor(folderName)) %>%
+  mutate(folderName = fct_relevel(folderName, 'Baseline','3 month','6 month',
+                                  '12 month','18 month','24 month','30 month','36 month'))
+LN_pos %>%
+  count(folderName, LN_pos) %>%
+  spread(LN_pos, n) %>%
+  mutate(pos_perc = `TRUE` / (`TRUE` + `FALSE`)*100) %>%
+  mutate(cum_perc = cumsum(coalesce(`TRUE`,0))/cumsum(coalesce(`TRUE`,0)+coalesce(`FALSE`,0))) %>%
+  rename('visit'='folderName','negative'=`FALSE`, 'positive'=`TRUE`) %>%
+  kable() %>%
+  kable_styling()
 
 #' ## Principle 3: Membranous (class V) LN more often presents with nephrotic
 #' syndrome than proliferative LN (class III or IV)
