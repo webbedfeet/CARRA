@@ -14,6 +14,7 @@
 #'
 #+ preamble, include = F
 knitr::opts_chunk$set(message = F, warning = F)
+pacman::p_load(char=c('tidyverse','janitor','broom', 'knitr','kableExtra', 'vroom', 'here','pacman'))
 abhiR::reload()
 #'
 #' <hr/>
