@@ -93,6 +93,17 @@ kable(out) %>%
 #' evaluate improvement. Note that `r out[1,3]` of subjects have **no** available
 #' EGFR value
 #'
+#' We can also compute the eGFR as 0.413 x height / serum creatinine
+
+labs1 <- vroom(here('data/raw/labs_data_2020-01-31_1545.csv'),
+               col_select = c(subjectId, visit = folderName, eventIndex, CREATVAL)) %>%
+  clean_names()
+heights <- vroom(here('data/raw/phyexam_data_2020-01-31_1545.csv'),
+                 col_select = c(subjectId, visit = folderName, eventIndex, HTORRES)) %>%
+  clean_names()
+egfr_computed_d <- all_subjects %>% left_join(labs1) %>% left_join(heights) %>%
+  mutate(eGFR = 0.413 * htorres / creatval)
+#'
 #' ## Urine protein:creatinine ratio
 #'
 #' I've addressed the availability of the UPC ratio in my nephrotic syndrome report
