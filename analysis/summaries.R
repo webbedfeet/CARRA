@@ -2,22 +2,28 @@
 #' title: CARRA Analysis
 #' author: Abhijit Dasgupta, PhD
 #' date: "`r format(Sys.time(), '%B %d, %Y %I:%m %p')`"
-#' output_format: html_document
+#' output:
+#'   html_document:
+#'     toc: true
+#'     toc_float: true
+#'     theme: journal
+#'     code_folding: hide
 #' ---
 #'
 #+ preamble, include = FALSE
 # Preamble ----------------------------------------------------------------
-library(readxl)
-library(tidyverse)
-library(data.table)
-library(glue)
-library(fs)
-library(here)
-library(knitr)
-library(kableExtra)
-
+library(pacman)
+p_load(char = c('readxl','tidyverse','data.table','glue','fs','here',
+                'knitr','kableExtra', 'vroom', 'janitor'))
+source(here('lib/pval_scientific.R'))
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE,
-                      cache = TRUE)
+                      cache = F)
+all_subjects <- vroom(here('data/raw/all_rows_data_2020-01-31_1545.csv'),
+                      col_select = c(subjectId, visit = folderName)) %>%
+  distinct() %>%
+  mutate(folderName = fct_relevel(visit, 'Baseline','6 month','12 month','18 month','24 month')) %>%
+  select(-folderName) %>%
+  clean_names()
 #'
 #+ data_date_version
 # Documenting version of data we're using ---------------------------------
@@ -39,72 +45,61 @@ names(data_dict) = make.names(names(data_dict))
 
 write.table(data_dict, sep = '\t', file = here('background/f-6-337-13136911_ZH2vHUc6_111319_CARRA_Registry_11.0_DataDictionary_DCRI_SxxX.tsv'))
 
-#' ## Data exploration and validation
-#'
-#' The biopsy data is crucial to evaluating lupus nephritis (LN), but apparently
-#' has some discrepancies.
-#'
-#' The data from the biopsy file apparently are from two sources:
-#+
-biopsy <- data.table::fread(here('data/raw/biopsy_data_2020-01-31_1545.csv'))
-kable(biopsy %>% count(formName)) %>%
-  kable_styling(full_width = FALSE)
-
-#' <hr/>
 #' ## Principle 1 : 20% to 75% of children with SLE will develop nephritis
-#'
-#' From the data dictionary, this question is answered in SLICC
-#' Re-define Yes as
-#' Either/or WHO2-6, ISNRPS2-6 = LN
-
-
-glue_data(data_dict %>% filter(Variable.Name=='SLICC00'),
-          'Variable {Variable.Name}: {Variable.Description}')
-
-all_rows <- read_csv(here('data/raw/all_rows_data_2020-01-31_1545.csv'))
-all_rows %>% filter(varName=='SLICC00') %>%
-  count(conceptValue) %>%
-  mutate(perc = n/sum(n)*100)
-
-#' ## Principle 2: 82% of LN in cSLE develops wihin the first year of diagnosis and 92% within 2 years
-#'
-#' ###  Data validation
-#'
-#' 1. Subjects 200 and 553 have no biopsy data (as evidenced by the biopsy data file),
-#'    but in the all_rows data their SLICC00 = 0, meaning no LN. How is this validated?
-#' 1.
-
-
-# New definition of LN:
-LN_ISNRPS <- all_rows %>% filter(str_detect(varName, 'ISNRPS[2-6]$'))
-LN_ISNRPS <- LN_ISNRPS %>% group_by(subjectId, eventIndex) %>%
-  summarize(ISNRPS_pos = any(conceptValue=='1')) %>%
-  right_join(LN_ISNRPS %>% select(subjectId, eventIndex, eventId, folderName, startDate) %>% distinct()) %>%
+#+ results='hide', echo = F
+slicc_info <- vroom(here('data/raw/slicc_data_2020-01-31_1545.csv'),
+                    col_select = c(subjectId, visit = folderName,
+                                   SLICC00)) %>%
+  clean_names()
+raw_biopsy <- readRDS(here('data/rda/biopsy_classes.rds')) # see biopsy_classes.R
+total_ln <- raw_biopsy %>%
+  group_by(subject_id) %>%
+  summarize(LN = ifelse(any(LN==1, na.rm=T), 1, 0)) %>%
   ungroup()
+#' From the data dictionary, this question is answered in the variable SLICC00
+#'
+#' I have verified that this definition is compatible with the raw data when
+#' we use both WHO and ISNRPS criteria.
+#'
+#' Note: Subject has lupus nephritis if any of WHO 2-6 or ISNRPS 2-6 are positive
+#'
+total_ln %>%
+  mutate(LN = ifelse(LN==1, 'Positive','Negative')) %>%
+  tabyl(LN) %>%
+  adorn_pct_formatting() %>%
+  set_names(c('Lupus nephritis','N','Percent')) %>%
+  kable(caption = 'Frequency of lupus nephritis') %>%
+  kable_styling(full_width = F)
 
-LN_WHO = all_rows %>% filter(str_detect(varName, 'WHO[2-6]$'))
-LN_WHO <- LN_WHO %>% group_by(subjectId, eventIndex) %>%
-  summarize(WHO_pos = any(conceptValue=='1')) %>%
-  right_join(LN_WHO %>% select(subjectId, eventIndex, eventId, folderName, startDate) %>% distinct()) %>%
-  ungroup()
+#' ## Principle 2: 82% of LN in cSLE develops within the first year of diagnosis and 92% within 2 years
+#'
+#+ echo = F
+raw_biopsy <- readRDS(here('data/rda/biopsy_classes.rds'))
+baseline_LN <- all_subjects %>% left_join(raw_biopsy) %>%
+  filter(visit == 'Baseline', !is.na(LN)) %>%
+  summarize(LN=sum(LN))
 
-LN_pos <-  LN_ISNRPS %>% full_join(LN_WHO) %>%
-  mutate(LN_pos = ISNRPS_pos | WHO_pos) %>%
-  select(-ISNRPS_pos, -WHO_pos) %>%
-  mutate(folderName = as.factor(folderName)) %>%
-  mutate(folderName = fct_relevel(folderName, 'Baseline','3 month','6 month',
-                                  '12 month','18 month','24 month','30 month','36 month'))
-LN_pos %>%
-  count(folderName, LN_pos) %>%
-  spread(LN_pos, n) %>%
-  mutate(pos_perc = `TRUE` / (`TRUE` + `FALSE`)*100) %>%
-  mutate(cum_perc = cumsum(coalesce(`TRUE`,0))/cumsum(coalesce(`TRUE`,0)+coalesce(`FALSE`,0))) %>%
-  rename('visit'='folderName','negative'=`FALSE`, 'positive'=`TRUE`) %>%
-  kable() %>%
-  kable_styling()
+firstyr_LN <- all_subjects %>% left_join(raw_biopsy) %>%
+  filter(visit %in% c('Baseline','3 month','6 month', '9 monht',
+                      '12 month'), !is.na(LN)) %>%
+  group_by(subject_id) %>%
+  summarize(LN = ifelse(any(LN==1, na.rm=T), 1, 0)) %>%
+  ungroup() %>%
+  summarize(LN=sum(LN))
 
-#' ## Principle 3: Membranous (class V) LN more often presents with nephrotic
-#' syndrome than proliferative LN (class III or IV)
+tribble(~Time, ~N,
+               'Baseline', baseline_LN %>% pull(LN),
+               'Within first year', firstyr_LN %>% pull(LN),
+               'Total', total_ln %>% summarize(LN = sum(LN)) %>% pull(LN)
+) %>%
+  mutate(Percent = 100* N/max(N)) %>%
+  kable(caption = 'Proportion of LN seen within first year', digits=2) %>%
+  kable_styling(full_width = F)
+#'
+#'
+
+
+#' ## Principle 3: Membranous (class V) LN more often presents with nephrotic syndrome than proliferative LN (class III or IV)
 #'
 #' Definition of LN classes:
 #'
@@ -119,40 +114,96 @@ LN_pos %>%
 #' 3. On examination, documentation of edema
 #'
 
-compute_classes <- function(N){
-  vars <- c(paste0("WHO",N), paste0("ISNRPS",N))
-  vname <- c('LN_class'); names(vname) = paste0('LN',N)
-  out <- all_rows %>%
-    filter(varName %in% vars) %>%
-    spread(varName, conceptValue) %>%
-    distinct() %>%
-    mutate(LN_class = ifelse(eval(expr(!!sym(vars[1]) =='1' | !!sym(vars[2]) == '1')), 1, 0)) %>%
-    select(subjectId, folderName, LN_class) %>%
-    rename(!!!vname)
-  return(out)
-}
-
-LN_classes <- map(2:5, compute_classes)
-
-## There seem to be some discrepancies in terms of unique data for individuals. Going
-## diving into the biopsy data
-biopsy <- data.table::fread(here('data/raw/biopsy_data_2020-01-31_1545.csv'))
-dim(distinct(biopsy[,c('subjectId','eventId')])) # 1834 2
-dim(distinct(biopsy[,c('subjectId','folderName')])) # 1820 2
-
-
 
 
 #' ## Principle 4: Short term renal outcomes are worse in blacks of African American heritage
 
-#' ## Principle 5: Short term renal outcomes are worse in patients who present with GFR < 60mL/min/1.73 m2
-#' and/or nephrotic-range proteinuria (> 1 protein/creatinine ratio)
+#' ## Principle 5: Short term renal outcomes are worse in patients who present with GFR < 60mL/min/1.73 m2 and/or nephrotic-range proteinuria (> 1 protein/creatinine ratio)
 
-#' ## Principle 6: Rituximab has been used as a steroid-sparing agent for induction
-#' in proliferative LN (LN vs no-LN, 3-4 vs 5)
+#' ## Principle 6: Rituximab has been used as a steroid-sparing agent for induction in proliferative LN (LN vs no-LN, 3-4 vs 5)
 #'
 #' Rituximab use: IMMMED = 30
 #' MEDCATON = 30
 
-#' Is there differences in age/gender for people getting Rtx.
+raw_biopsy <- readRDS(here('data/rda/biopsy_classes.rds'))
+all_rows <- vroom(here('data/raw/all_rows_data_2020-01-31_1545.csv'))
+ritux <- all_rows %>% filter(conceptValue=='Rituximab (Rituxan)') %>%
+  clean_names() %>%
+  select(subject_id, ritux = concept_value) %>%
+  distinct()
+tab_rtx_ln <- all_subjects %>% left_join(raw_biopsy) %>% left_join(ritux) %>%
+  filter(!is.na(LN)) %>%
+  mutate(Rituximab = ifelse(is.na(ritux), 'No','Yes'),
+         LN = ifelse(LN==1, 'Pos','Neg')) %>%
+  tabyl(Rituximab, LN)
+
+
+tab_rtx_ln %>%
+  adorn_percentages('col') %>%
+  adorn_pct_formatting(digits=2) %>%
+  adorn_ns() %>%
+  adorn_title('combined') %>%
+  knitr::kable(caption = 'Rituximab use between LN and non-LN subjects') %>%
+  kable_styling()
+#'
+#' This is statistically significant, with the $\chi^2$ test p-value being
+#' `r pval_scientific(chisq.test(tab_rtx_ln)$p.value)`.
+#'
+tbl_rit_class <- all_subjects %>%
+  left_join(raw_biopsy) %>%
+  filter(!is.na(LN)) %>%
+  group_by(subject_id) %>%
+  summarize_at(vars(starts_with("LN")), ~ifelse(any(.==1,na.rm=T),1, 0)) %>%
+  left_join(ritux) %>%
+  mutate(Rituximab = ifelse(is.na(ritux), 'No', 'Yes')) %>%
+  mutate(LN34 = ifelse(LN3==1|LN4==1, 1, 0)) %>%
+  select(subject_id, LN34, LN5, Rituximab) %>%
+  gather(Class, value, LN34, LN5) %>%
+  filter(value==1) %>%
+  tabyl(Rituximab, Class)
+
+tbl_rit_class %>%
+  adorn_percentages('col') %>%
+  adorn_pct_formatting() %>%
+  adorn_title('combined') %>%
+  rename(`LN3/4` = LN34) %>%
+  kable(caption = 'Rituximab use by LN class') %>%
+  kable_styling()
+
+#' This is not statistically significant (p-value = `r chisq.test(tbl_rit_class)$p.value`)
+
+
+#'
+#' ### Is there differences in age/gender for people getting Rituximab
+demographic <- vroom(here('data/raw/dem_data_2020-01-31_1545.csv')) %>%
+  clean_names() %>%
+  select(subject_id, rheumage, sex, dxdage,
+         white, black, asian, amerind, hispanic,
+         mideast, noanswer, nathwn, othrace, residenc)
+bl <- demographic %>% left_join(slicc_info) %>%
+  rename(ritux = slicc00) %>%
+  mutate(ritux = ifelse(ritux==1, 'Yes','No'))
+
+bl %>% group_by(ritux) %>%
+  summarize(`Median age` = median(rheumage),
+            IQR = IQR(rheumage)) %>%
+  kable(caption = 'Rituximab use by age') %>%
+  kable_styling()
+
+#' This is not significant
+#' (Wilcoxon test p-value = `r format(wilcox.test(rheumage~ritux, data=bl)$p.value, digits=2)`)
+
+tab_rit_gender <- bl %>%
+  rename(Sex=sex, Rituximab = ritux) %>%
+  tabyl(Sex, Rituximab)
+tab_rit_gender %>%
+  adorn_percentages('col') %>%
+  adorn_pct_formatting() %>%
+  adorn_title('combined') %>%
+  kable(caption = 'Rituximab use by gender') %>%
+  kable_styling()
+
+#' This is not statistically significant
+#' ($\chi^2$ test p-value = `r format(chisq.test(tab_rit_gender)$p.value, digits=2)`)
+
 
