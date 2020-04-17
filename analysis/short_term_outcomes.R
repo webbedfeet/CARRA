@@ -19,7 +19,12 @@
 #'   - State 3: \<30ml/min1.73 m2
 #' - Assess change in GFR- initial GFR vs most recent GFR
 #' - Occurrence of remission:
-#' - Creatinine within normal range:
+#'     - Creatinine within normal range
+#'     - urine protein:creatinine ratio\<0.2
+#'     - urine red blood cells\<10/high powered field
+#' - Occurrence of end-stage renal disease, transplant, and/or dialysis.
+#'
+#' Normal creatinine levels:
 #'
 #'   Age                              Creatinine (serum)
 #' -------------------------------- -------------------- --------------
@@ -27,10 +32,7 @@
 #' Adolescent (12-17 years old)     0.5-1.0 mg/dL        44-88 umol/L
 #' Adult (18 years old and older)   0.6-1.1 mg/dL        53-97 umol/L
 #'
-#' -   urine protein:creatinine ratio\<0.2
-#' -   urine red blood cells\<10/high powered field
-#' -   Occurrence of end-stage renal disease, transplant, and/or dialysis.
-#'
+
 #' ## Creatinine conversions
 #'
 #' To convert umol/l to mg/dl, multiply by 0.0113. To convert mg/dl to umol/l, multiply by 88.4.
@@ -155,7 +157,7 @@ egfr_computed_d <- all_subjects %>% left_join(lab_screat) %>% left_join(heights)
 #' ## Urine protein:creatinine ratio
 #'
 #' I've addressed the availability of the UPC ratio in my nephrotic syndrome report
-#'
+#  Urine RBC ------
 #' ## Urine RBC
 #'
 #' Urine RBC is available as a dichotomized variable with levels < 5/hpf and >= 5/hpf, rather than the cutoff of 10/hpf that you specify
@@ -166,7 +168,8 @@ urine <- vroom(here('data/raw/urine_data_2020-01-31_1545.csv'),
   right_join(all_subjects) %>%
   filter(visit %in% c('Baseline',paste(seq(6,24,by=6), 'month'))) %>%
   mutate(visit = fct_relevel(visit, 'Baseline','6 month')) %>%
-  mutate(miss_urbc = (is.na(urinrbc)|urinrbc=='Not Done'))
+  mutate(miss_urbc = (is.na(urinrbc)|urinrbc=='Not Done')) %>%
+  mutate(urine_rbc = as.factor(ifelse(urinrbc=='Not Done', NA, urinrbc)))
 
 out <- urine %>%
   tabyl(visit, urinrbc) %>%
@@ -182,7 +185,9 @@ out %>%
   kable_styling() %>%
   column_spec(c(1,ncol(out)), bold=T)
 
-
+short_outcomes <- egfr_computed_d %>% select(subject_id, visit, creatval, dxdage, age_cat,
+                                             norm_min, norm_max, creat_status,
+                                             eGFR, gfr_class) %>% left_join(urine %>% select(subject_id, visit, urine_rbc))
 #' ## ESRD, Dialysis or Transplant
 #'
 #' Variable    Description
@@ -191,3 +196,20 @@ out %>%
 #' SLEDS7      Have you ever had a kidney transplant?
 #' SLEDS8      Have you ever been on dialysis?
 #'
+sleds_data <- vroom(here('data/raw/sleds_data_2020-01-31_1545.csv')) %>%
+  clean_names() %>%
+  select(subject_id, visit = folder_name, transplant = sleds7, dialysis = sleds8)
+sliccdi_data <- vroom(here('data/raw/sliccdi_data_2020-01-31_1545.csv')) %>%
+  clean_names() %>%
+  select(subject_id, visit = folder_name, esrd = esrenal)
+
+short_outcomes <- short_outcomes %>% left_join(sleds_data %>% select(-visit)) %>%
+  left_join(sliccdi_data %>% select(-visit))
+
+
+# Remission ---------------------------------------------------------------
+
+short_outcomes <- short_outcomes %>%
+  mutate(remission = as.factor(ifelse(creat_status == 'Normal' & urine_rbc == '< 5 RBC/hpf',
+                            'Yes','No')))
+saveRDS(short_outcomes, here('data/rda/short_outcomes.rds'),compress=T)
