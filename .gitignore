@@ -4,3 +4,4 @@
 data/*
 *.html
 data
+/**/*cache/*
