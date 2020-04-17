@@ -6,17 +6,20 @@
 #'   html_document:
 #'     toc: true
 #'     toc_float: true
-#'     theme: journal
+#'     theme: cerulean
+#'     hightlight: espresso
 #'     code_folding: hide
 #' ---
 #'
-#+ preamble, include = FALSE
+#+ preamble, echo=T, results='hide', message=F, warning=F
 # Preamble ----------------------------------------------------------------
 library(pacman)
 p_load(char = c('readxl','tidyverse','data.table','glue','fs','here',
                 'knitr','kableExtra', 'vroom', 'janitor'))
 source(here('lib/pval_scientific.R'))
-knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE,
+
+
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE,
                       cache = F)
 all_subjects <- vroom(here('data/raw/all_rows_data_2020-01-31_1545.csv'),
                       col_select = c(subjectId, visit = folderName)) %>%
@@ -25,7 +28,7 @@ all_subjects <- vroom(here('data/raw/all_rows_data_2020-01-31_1545.csv'),
   select(-folderName) %>%
   clean_names()
 #'
-#+ data_date_version
+#+ data_date_version, echo=F
 # Documenting version of data we're using ---------------------------------
 data_date <- tibble(fname = dir_ls(here('data/raw'), glob = '*.zip')) %>%
   separate(fname, c('p1','p2','dt','tm'), sep = '_', remove = T) %>% # Grabbing metadata from file names
@@ -37,7 +40,7 @@ data_date <- tibble(fname = dir_ls(here('data/raw'), glob = '*.zip')) %>%
   slice(1) # Take the first row, i.e. the latest date
 
 #' **Data version:** The version of data we're using is from `r glue_data(data_date, '{dt} {substr(as.POSIXct(as.character(tm), format="%H%M"),12,16)}')`.
-
+#+ data_dict, echo = F
 # reading data dictionary -------------------------------------------------
 
 data_dict <- read_excel(here('background/f-6-337-13136911_ZH2vHUc6_111319_CARRA_Registry_11.0_DataDictionary_DCRI_SxxX.xlsx'))
@@ -45,8 +48,16 @@ names(data_dict) = make.names(names(data_dict))
 
 write.table(data_dict, sep = '\t', file = here('background/f-6-337-13136911_ZH2vHUc6_111319_CARRA_Registry_11.0_DataDictionary_DCRI_SxxX.tsv'))
 
+
+# Principle 1 -------------------------------------------------------------
 #' ## Principle 1 : 20% to 75% of children with SLE will develop nephritis
-#+ results='hide', echo = F
+#' From the data dictionary, this question is answered in the variable SLICC00
+#'
+#' I have verified that this definition is compatible with the raw data when
+#' we use both WHO and ISNRPS criteria.
+#'
+#' Note: Subject has lupus nephritis if any of WHO 2-6 or ISNRPS 2-6 are positive
+#'
 slicc_info <- vroom(here('data/raw/slicc_data_2020-01-31_1545.csv'),
                     col_select = c(subjectId, visit = folderName,
                                    SLICC00)) %>%
@@ -56,13 +67,7 @@ total_ln <- raw_biopsy %>%
   group_by(subject_id) %>%
   summarize(LN = ifelse(any(LN==1, na.rm=T), 1, 0)) %>%
   ungroup()
-#' From the data dictionary, this question is answered in the variable SLICC00
-#'
-#' I have verified that this definition is compatible with the raw data when
-#' we use both WHO and ISNRPS criteria.
-#'
-#' Note: Subject has lupus nephritis if any of WHO 2-6 or ISNRPS 2-6 are positive
-#'
+
 total_ln %>%
   mutate(LN = ifelse(LN==1, 'Positive','Negative')) %>%
   tabyl(LN) %>%
@@ -71,9 +76,11 @@ total_ln %>%
   kable(caption = 'Frequency of lupus nephritis') %>%
   kable_styling(full_width = F)
 
+
 #' ## Principle 2: 82% of LN in cSLE develops within the first year of diagnosis and 92% within 2 years
 #'
-#+ echo = F
+#+ echo = T
+# Principle 2 -------------------------------------------------------------
 raw_biopsy <- readRDS(here('data/rda/biopsy_classes.rds'))
 baseline_LN <- all_subjects %>% left_join(raw_biopsy) %>%
   filter(visit == 'Baseline', !is.na(LN)) %>%
@@ -112,18 +119,21 @@ tribble(~Time, ~N,
 #' 1. The presence of nephrotic range proteinuria, which is a urine protein:creatinine ratio > 1mg/mg or if there is a 24 hour urine instead of a urine protein:creatinine ratio (different docs check it differently), it would be a 24 hour protein excretion greater than 3.5 g/24 hours.
 #' 2. Hypoalbuminemia (an albumin less than 3 g/dL)
 #' 3. On examination, documentation of edema
-#'
+# Principle 3 -------------------------------------------------------------
 
 
 
-#' ## Principle 4: Short term renal outcomes are worse in blacks of African American heritage
+#' ## Principle 4: Short term renal outcomes are worse in blacks
+# Principle 4 -------------------------------------------------------------
 
 #' ## Principle 5: Short term renal outcomes are worse in patients who present with GFR < 60mL/min/1.73 m2 and/or nephrotic-range proteinuria (> 1 protein/creatinine ratio)
+# Principle 5 -------------------------------------------------------------
 
 #' ## Principle 6: Rituximab has been used as a steroid-sparing agent for induction in proliferative LN (LN vs no-LN, 3-4 vs 5)
 #'
 #' Rituximab use: IMMMED = 30
 #' MEDCATON = 30
+# Principle 6 -------------------------------------------------------------
 
 raw_biopsy <- readRDS(here('data/rda/biopsy_classes.rds'))
 all_rows <- vroom(here('data/raw/all_rows_data_2020-01-31_1545.csv'))
