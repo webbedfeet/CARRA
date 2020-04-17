@@ -22,11 +22,12 @@ source(here('lib/pval_scientific.R'))
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE,
                       cache = F)
 all_subjects <- vroom(here('data/raw/all_rows_data_2020-01-31_1545.csv'),
-                      col_select = c(subjectId, visit = folderName)) %>%
+                      col_select = c(subjectId, visit = folderName, eventIndex)) %>%
   distinct() %>%
   mutate(folderName = fct_relevel(visit, 'Baseline','6 month','12 month','18 month','24 month')) %>%
   select(-folderName) %>%
   clean_names()
+saveRDS(all_subjects, here('data/rda/all_subjects.rds'), compress=T)
 #'
 #+ data_date_version, echo=F
 # Documenting version of data we're using ---------------------------------
@@ -126,6 +127,19 @@ tribble(~Time, ~N,
 #' ## Principle 4: Short term renal outcomes are worse in blacks
 # Principle 4 -------------------------------------------------------------
 
+all_subjects <- readRDS(here('data/rda/all_subjects.rds'))
+demographic <- readRDS(here('data/rda/demographic.rds')) # computed below
+short_outcomes <- readRDS(here('data/rda/short_outcomes.rds'))
+prin4 <- all_subjects %>%
+  left_join(demographic %>%
+              select(white:othrace, subject_id)) %>%
+  left_join(short_outcomes)
+race <- demographic %>%
+  select(subject_id, white:othrace) %>%
+  gather(race, indic, -subject_id) %>%
+  filter(indic==1)
+
+
 #' ## Principle 5: Short term renal outcomes are worse in patients who present with GFR < 60mL/min/1.73 m2 and/or nephrotic-range proteinuria (> 1 protein/creatinine ratio)
 # Principle 5 -------------------------------------------------------------
 
@@ -190,6 +204,7 @@ demographic <- vroom(here('data/raw/dem_data_2020-01-31_1545.csv')) %>%
   select(subject_id, rheumage, sex, dxdage,
          white, black, asian, amerind, hispanic,
          mideast, noanswer, nathwn, othrace, residenc)
+saveRDS(demographic, here('data/rda/demographic.rds'), compress=T)
 bl <- demographic %>% left_join(slicc_info) %>%
   rename(ritux = slicc00) %>%
   mutate(ritux = ifelse(ritux==1, 'Yes','No'))
