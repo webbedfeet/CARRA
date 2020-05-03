@@ -24,7 +24,7 @@ ln_visit <- vroom(here('data/raw/vis_data_2020-01-31_1545.csv'),
 
 raw_biopsy <- vroom('data/raw/biopsy_data_2020-01-31_1545.csv') %>%
   clean_names() %>%
-  select(subject_id, visit = folder_name, event_index,
+  select(subject_id, visit = folder_name, event_index, biopdtc_yyyy,
          matches('[who|isnrps][2-6]$')) %>%
   mutate(LN = rowSums(.[,-(1:3)])) %>%
   mutate(LN3 = rowSums(.[,c('isnrps3','who3')]),
