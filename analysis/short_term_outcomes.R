@@ -44,12 +44,7 @@
 abhiR::reload()
 knitr::opts_chunk$set(message = F, warning = F)
 data_dict <- readRDS(here('data','rda','data_dict.rds'))
-all_subjects <- vroom(here('data/raw/all_rows_data_2020-01-31_1545.csv'),
-                      col_select = c(subjectId, visit = folderName)) %>%
-  distinct() %>%
-  mutate(folderName = fct_relevel(visit, 'Baseline','6 month','12 month','18 month','24 month')) %>%
-  select(-folderName) %>%
-  clean_names()
+all_subjects <-readRDS(here('data/rda/all_subjects.rds'))
 
 #' ## GFR
 #'
@@ -150,8 +145,8 @@ egfr_computed_d <- all_subjects %>% left_join(lab_screat) %>% left_join(heights)
                                       '24 month','30 month','36 month'))) %>%
   mutate(gfr_class = case_when(
     eGFR < 30 ~ 'Stage 3',
-    eGFR > 6 ~ 'Stage 1',
-    TRUE ~ 'Stage 2'
+    eGFR > 60 ~ 'Stage 1',
+    eGFR >= 30 & eGFR <= 60 ~ 'Stage 2'
   ))
 #'
 #' ## Urine protein:creatinine ratio
@@ -212,4 +207,18 @@ short_outcomes <- short_outcomes %>% left_join(sleds_data %>% select(-visit)) %>
 short_outcomes <- short_outcomes %>%
   mutate(remission = as.factor(ifelse(creat_status == 'Normal' & urine_rbc == '< 5 RBC/hpf',
                             'Yes','No')))
+
+
+# Change in GFR -----------------------------------------------------------
+
+short_outcomes <- all_subjects %>% filter(!is.na(event_index)) %>% left_join(short_outcomes) %>%
+  mutate(visit = fct_relevel(visit, 'Baseline','3 month','6 month'))
+
+change_gfr <- short_outcomes %>%
+  select(subject_id, visit, event_index, eGFR, gfr_class) %>%
+  filter(!is.na(eGFR)) %>%
+  group_by(subject_id) %>%
+  filter(event_index == min(event_index, na.rm=T) | event_index == max(event_index, na.rm=T))
+
+
 saveRDS(short_outcomes, here('data/rda/short_outcomes.rds'),compress=T)
