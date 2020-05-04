@@ -7,7 +7,7 @@
 #'     toc: true
 #'     toc_float: true
 #'     theme: cerulean
-#'     hightlight: espresso
+#'     highlight: espresso
 #'     code_folding: hide
 #' ---
 #'
@@ -16,7 +16,7 @@
 library(pacman)
 p_load(char = c('readxl','tidyverse','data.table','glue','fs','here',
                 'knitr','kableExtra', 'vroom', 'janitor'))
-source(here('lib/pval_scientific.R'))
+source(here('lib/R/pval_scientific.R'))
 
 
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE,
@@ -44,8 +44,9 @@ data_date <- tibble(fname = dir_ls(here('data/raw'), glob = '*.zip')) %>%
 #+ data_dict, echo = F
 # reading data dictionary -------------------------------------------------
 
-data_dict <- read_excel(here('background/f-6-337-13136911_ZH2vHUc6_111319_CARRA_Registry_11.0_DataDictionary_DCRI_SxxX.xlsx'))
-names(data_dict) = make.names(names(data_dict))
+data_dict <- read_excel(here('background/f-6-337-13136911_ZH2vHUc6_111319_CARRA_Registry_11.0_DataDictionary_DCRI_SxxX.xlsx')) %>%
+  clean_names()
+
 
 write.table(data_dict, sep = '\t', file = here('background/f-6-337-13136911_ZH2vHUc6_111319_CARRA_Registry_11.0_DataDictionary_DCRI_SxxX.tsv'))
 
@@ -82,31 +83,67 @@ total_ln %>%
 #'
 #+ echo = T
 # Principle 2 -------------------------------------------------------------
-raw_biopsy <- readRDS(here('data/rda/biopsy_classes.rds'))
-baseline_LN <- all_subjects %>% left_join(raw_biopsy) %>%
-  filter(visit == 'Baseline', !is.na(LN)) %>%
-  summarize(LN=sum(LN))
-
-firstyr_LN <- all_subjects %>% left_join(raw_biopsy) %>%
-  filter(visit %in% c('Baseline','3 month','6 month', '9 monht',
-                      '12 month'), !is.na(LN)) %>%
+# raw_biopsy <- readRDS(here('data/rda/biopsy_classes.rds'))
+# baseline_LN <- all_subjects %>% left_join(raw_biopsy) %>%
+#   filter(visit == 'Baseline', !is.na(LN)) %>%
+#   summarize(LN=sum(LN))
+#
+# firstyr_LN <- all_subjects %>% left_join(raw_biopsy) %>%
+#   filter(visit %in% c('Baseline','3 month','6 month', '9 monht',
+#                       '12 month'), !is.na(LN)) %>%
+#   group_by(subject_id) %>%
+#   summarize(LN = ifelse(any(LN==1, na.rm=T), 1, 0)) %>%
+#   ungroup() %>%
+#   summarize(LN=sum(LN))
+#
+# total_ln <- raw_biopsy %>%
+#   group_by(subject_id) %>%
+#   summarize(LN = ifelse(any(LN==1, na.rm=T), 1, 0)) %>%
+#   ungroup()
+# tribble(~Time, ~N,
+#                'Baseline', baseline_LN %>% pull(LN),
+#                'Within first year', firstyr_LN %>% pull(LN),
+#                'Total', total_ln %>% summarize(LN = sum(LN)) %>% pull(LN)
+# ) %>%
+#   mutate(Percent = 100* N/max(N)) %>%
+#   kable(caption = 'Proportion of LN seen within first year', digits=2) %>%
+#   kable_styling(full_width = F)
+#'
+#' We are going to look at actual date of SLE diagnosis and the
+#' date of biopsy. We'll restrict to individuals with LN. We'll also assume that
+#' biopsy dates prior to date of lupus diagnosis are aberrant and should be considered
+#' the same time as the diagnosis date.
+#'
+#' A limitation of this analysis is that we only have year of diagnosis and year of
+#' biopsy, not the actual dates for identifiability reasons. So the differences in calendar years
+#' may represent periods longer than a year, depending on when the actual dates of the
+#' diagnosis and biopsy were.
+#'
+pdis <- vroom(here('data/raw/pdisease_data_2020-01-31_1545.csv')) %>%
+  clean_names() %>%
+  select(subject_id, dxdt_yyyy) %>%
   group_by(subject_id) %>%
-  summarize(LN = ifelse(any(LN==1, na.rm=T), 1, 0)) %>%
-  ungroup() %>%
-  summarize(LN=sum(LN))
+  summarize(dxdt = min(dxdt_yyyy, na.rm=T)) %>%
+  ungroup()
+raw_biopsy <- readRDS(here('data/rda/biopsy_classes.rds')) %>%
+  select(subject_id, visit, event_index, biopdtc_yyyy, biopsdtc_yyyy, LN) %>%
+  filter(LN==1) %>%
+  group_by(subject_id) %>%
+  summarize(biopdtc = min(biopdtc_yyyy, na.rm=T), biopsdtc = min(biopsdtc_yyyy, na.rm=T),
+            LN = ifelse(any(LN==1, na.rm=T), 1,0)) %>%
+  ungroup()
+biopsy <- all_subjects %>% select(subject_id) %>% distinct() %>% left_join(raw_biopsy) %>% left_join(pdis) %>%
+  mutate(time_to_pos_biopsy = biopsdtc - dxdt) %>%
+  filter(LN==1)
 
-tribble(~Time, ~N,
-               'Baseline', baseline_LN %>% pull(LN),
-               'Within first year', firstyr_LN %>% pull(LN),
-               'Total', total_ln %>% summarize(LN = sum(LN)) %>% pull(LN)
-) %>%
-  mutate(Percent = 100* N/max(N)) %>%
-  kable(caption = 'Proportion of LN seen within first year', digits=2) %>%
+biopsy %>% count(time_to_pos_biopsy) %>% mutate(prob = 100*cumsum(n)/sum(n)) %>%
+  filter(time_to_pos_biopsy <=2) %>%
+  kable(col.names = c('Years', 'N', 'Cumulative probability'),
+        caption = 'Time from diagnosis to positive biopsy',
+        digits=2) %>%
   kable_styling(full_width = F)
-#'
-#'
 
-
+# Principle 3 -------------------------------------------------------------
 #' ## Principle 3: Membranous (class V) LN more often presents with nephrotic syndrome than proliferative LN (class III or IV)
 #'
 #' Definition of LN classes:
@@ -120,24 +157,120 @@ tribble(~Time, ~N,
 #' 1. The presence of nephrotic range proteinuria, which is a urine protein:creatinine ratio > 1mg/mg or if there is a 24 hour urine instead of a urine protein:creatinine ratio (different docs check it differently), it would be a 24 hour protein excretion greater than 3.5 g/24 hours.
 #' 2. Hypoalbuminemia (an albumin less than 3 g/dL)
 #' 3. On examination, documentation of edema
-# Principle 3 -------------------------------------------------------------
-
-
+#'
+#' ### Poor availability of data
+#' To evaluate this principle we need information on protein:creatinine ratios in urine, albumin
+#' levels and documentation of edema. First of all, it does not appear that **albumin was collected**,
+#' at least it is not available in the CARRA database.
+#'
+#' Second, there is a serious lack of urine protein:creatinine ratios. See the
+#' separate report, which highlights the fact that only around 25-30% of subjects had
+#' urine protein:creatinine ratios available at any visit.
+#'
+#' These two issues preclude us from looking at nephrotic syndrome as an outcome for any
+#' analysis.
 
 #' ## Principle 4: Short term renal outcomes are worse in blacks
 # Principle 4 -------------------------------------------------------------
+make_visit_index <- function(d){
+  d %>% filter(!(visit %in% c('Common Forms','Medications', 'Event'))) %>%
+    mutate(visit=fct_relevel(visit, 'Baseline','6 month')) %>%
+    mutate(visit_index = event_index) %>%
+    mutate(visit_index = ifelse(visit == 'Unsch' & !is.na(event_index),
+                                event_index - 0.5, event_index)) %>%
+    mutate(visit_index = ifelse(!is.na(visit) & is.na(visit_index),
+                                as.numeric(visit)-0.5, visit_index))
+}
 
 all_subjects <- readRDS(here('data/rda/all_subjects.rds'))
 demographic <- readRDS(here('data/rda/demographic.rds')) # computed below
 short_outcomes <- readRDS(here('data/rda/short_outcomes.rds'))
+raw_biopsy <- readRDS(here('data/rda/biopsy_classes.rds')) %>%
+  select(subject_id:event_index, starts_with("LN"))
 prin4 <- all_subjects %>%
   left_join(demographic %>%
               select(white:othrace, subject_id)) %>%
-  left_join(short_outcomes)
-race <- demographic %>%
-  select(subject_id, white:othrace) %>%
-  gather(race, indic, -subject_id) %>%
-  filter(indic==1)
+  left_join(short_outcomes) %>%
+  left_join(raw_biopsy) %>%
+  distinct() %>%
+  make_visit_index()
+
+
+#' Based on conversations, we will consider only LN patients and take their first
+#' visit with confirmed LN as the baseline time for the GFR change analysis. We will look at
+#' race, baseline GFR level, as well as LN classes, as stratifying variables
+#'
+prin4$event_index[prin4$subject_id==139 & prin4$visit=='6 month'] <- 2.5
+baseline_time <- prin4 %>%
+  filter(LN == 1, !is.na(LN)) %>%
+  group_by(subject_id) %>%
+  filter(event_index == min(event_index)) %>%
+  ungroup() %>%
+  select(subject_id, visit, baseline_time = event_index) %>%
+  distinct()
+#' There are `r nrow(baseline_time)` individuals with
+#' confirmed LN.
+#'
+prin4 <- prin4 %>% left_join(baseline_time) %>%
+  filter(!is.na(baseline_time), !is.na(LN)) %>%
+  group_by(subject_id) %>%
+  filter(event_index >= baseline_time) %>%
+  ungroup() %>%
+  distinct()
+
+## GFR
+
+d <- prin4 %>%
+  filter(!is.na(gfr_class)) %>%
+  group_by(subject_id) %>%
+  filter(event_index == min(event_index) | event_index==max(event_index)) %>%
+  ungroup() %>%
+  select(subject_id, event_index, gfr_class) %>%
+  distinct() %>%
+  mutate(event_index = ifelse(event_index == 1, 'first','last'))
+d %>% count(subject_id) %>% filter(n > 1) %>%
+  left_join(d) %>% distinct() %>%
+  spread(event_index, gfr_class) %>%
+  filter(!is.na(last)) %>%
+  tabyl(first, last) %>%
+  adorn_percentages('all') %>%
+  adorn_pct_formatting() %>%
+  adorn_title('combined') %>%
+  kable(caption = 'Percentage by GFR stage transition') %>%
+  kable_styling()
+
+d %>% count(subject_id) %>% filter(n > 1) %>% left_join(d) %>% distinct() %>%
+  spread(event_index, gfr_class) %>%
+  filter(!is.na(last)) %>%
+  tabyl(first, last) %>%
+  adorn_percentages('row') %>%
+  adorn_pct_formatting() %>% adorn_ns() %>%
+  adorn_title('combined') %>%
+  kable(caption = 'Percentage by GFR stage transition') %>%
+  kable_styling()
+
+## Remission
+
+prin4 %>% filter(visit == 'Baseline') %>%
+  tabyl(remission) %>%
+  adorn_pct_formatting() %>%
+  kable(caption = '"Normal" status at baseline') %>%
+  kable_styling()
+## Omit subjects who are normal at baseline
+prin4 %>%
+  filter(!is.na(remission)) %>%
+  filter(subject_id %in% (prin4 %>% filter(visit == 'Baseline', remission=='No') %>%
+                            pull(subject_id))) %>%
+  tabyl(remission, black, visit) %>% adorn_percentages('col') %>%
+  adorn_pct_formatting() %>%
+  adorn_ns() %>%
+  bind_rows(.id = 'visit') %>%
+  mutate(visit = fct_relevel(visit, 'Baseline','6 month','12 month','18 month')) %>%
+  arrange(visit) %>%
+  filter(visit != 'Baseline') %>%
+  rename(`Non-black` = `0`, Black = `1`) %>%
+  kable(caption = 'Proportion getting to remission by time and race') %>%
+  kable_styling()
 
 
 #' ## Principle 5: Short term renal outcomes are worse in patients who present with GFR < 60mL/min/1.73 m2 and/or nephrotic-range proteinuria (> 1 protein/creatinine ratio)
@@ -231,4 +364,13 @@ tab_rit_gender %>%
 #' This is not statistically significant
 #' ($\chi^2$ test p-value = `r format(chisq.test(tab_rit_gender)$p.value, digits=2)`)
 
+#' # Session information
+#'
+#' This analysis was done using `r R.version$version.string` and the following packages
+#+ packages, results = 'asis', echo = FALSE
+pkgs <- p_loaded() %>% sort()
+d <- tibble(Package = pkgs) %>%
+  mutate(Version = map(Package, p_ver) %>% map_chr(as.character))
+bl <- glue::glue_data(d, '{Package} ({Version})') %>% paste(collapse = '; ')
+cat(bl)
 
