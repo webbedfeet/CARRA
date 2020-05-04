@@ -61,9 +61,9 @@ lab_blood <- vroom(here('data/raw/labs_data_2020-01-31_1545.csv'),
                    col_select = c(subjectId, visit = folderName, eventIndex, EGFRVAL)) %>%
   clean_names() %>% right_join(all_subjects)
 lab_blood %>%
-  filter(visit %in% c('Baseline',paste(c(6,12,18,24), 'month'))) %>%
-  mutate(visit = fct_relevel(visit, 'Baseline','6 month')) %>%
+  filter(str_detect(visit, regex('Baseline|month'))) %>%
   mutate(miss_egfr = is.na(egfrval)) %>%
+  mutate(visit = fct_relevel(visit, 'Baseline','3 month', '6 month','9 month')) %>%
   tabyl(visit, miss_egfr) %>%
   adorn_percentages('row') %>%
   adorn_pct_formatting() %>%
@@ -79,11 +79,12 @@ lab_blood %>%
 perc2frac <- function(x) as.numeric(str_remove(x,'%'))/100
 
 out <- lab_blood %>%
-  filter(visit %in% c('Baseline',paste(c(6,12,18,24),'month'))) %>%
+  filter(str_detect(visit, regex('Baseline|month'))) %>%
   group_by(subject_id) %>%
-  summarise(n_entries = sum(!is.na(egfrval))) %>%
+  summarise(n_entries = naniar::n_complete(egfrval)) %>%
   tabyl(n_entries) %>%
-  mutate(cumperc = cumsum(percent)) %>%
+  mutate(cumperc = cumsum(percent),
+         n_entries = as.character(n_entries)) %>%
   adorn_totals() %>%
   mutate(n = as.character(n)) %>%
   adorn_pct_formatting() %>%
@@ -180,9 +181,13 @@ out %>%
   kable_styling() %>%
   column_spec(c(1,ncol(out)), bold=T)
 
-short_outcomes <- egfr_computed_d %>% select(subject_id, visit, creatval, dxdage, age_cat,
-                                             norm_min, norm_max, creat_status,
-                                             eGFR, gfr_class) %>% left_join(urine %>% select(subject_id, visit, urine_rbc))
+short_outcomes <- egfr_computed_d %>%
+  select(subject_id, visit, creatval, dxdage, age_cat,
+         norm_min, norm_max, creat_status,
+         eGFR, gfr_class) %>%
+  left_join(urine %>%
+              select(subject_id, visit, urine_rbc)) %>%
+  distinct()
 #' ## ESRD, Dialysis or Transplant
 #'
 #' Variable    Description
@@ -212,13 +217,16 @@ short_outcomes <- short_outcomes %>%
 # Change in GFR -----------------------------------------------------------
 
 short_outcomes <- all_subjects %>% filter(!is.na(event_index)) %>% left_join(short_outcomes) %>%
-  mutate(visit = fct_relevel(visit, 'Baseline','3 month','6 month'))
+  mutate(visit = fct_relevel(visit, 'Baseline','3 month','6 month', '9 month')) %>%
+  distinct()
 
 change_gfr <- short_outcomes %>%
   select(subject_id, visit, event_index, eGFR, gfr_class) %>%
   filter(!is.na(eGFR)) %>%
   group_by(subject_id) %>%
-  filter(event_index == min(event_index, na.rm=T) | event_index == max(event_index, na.rm=T))
+  filter(event_index == min(event_index, na.rm=T) | event_index == max(event_index, na.rm=T)) %>%
+  ungroup()
 
 
 saveRDS(short_outcomes, here('data/rda/short_outcomes.rds'),compress=T)
+
