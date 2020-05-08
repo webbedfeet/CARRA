@@ -1,7 +1,7 @@
 #' ---
 #' title: Defining nephrotic syndrome in the data
 #' author: Abhijit Dasgupta
-#' date: February 20, 2020
+#' date: '`r format(Sys.Date(), "%B %d, %Y")`'
 #' output:
 #'   html_document:
 #'     code_folding: hide
@@ -23,8 +23,6 @@ abhiR::reload()
 #' We have a paucity of data that can help us define **nephrotic syndrome** among the study
 #' subjects. The availability of urine protein:creatinine ratio is limited, and it appears that
 #' serum albumin is not measured on these subject.
-#'
-#'
 #'
 #' <hr/>
 #'
