@@ -24,9 +24,7 @@ abhiR::reload()
 #' subjects. The availability of urine protein:creatinine ratio is limited, and it appears that
 #' serum albumin is not measured on these subject.
 #'
-#' How can we proceed? Does this mean reaching out to the Boston folks, or are we just stuck.
-#' Please double check my variable extractions to see that I'm not missing obvious variables that
-#' are available in the dataset
+#'
 #'
 #' <hr/>
 #'
