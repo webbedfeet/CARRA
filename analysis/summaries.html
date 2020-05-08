@@ -1684,15 +1684,14 @@ div.tocify {
 <span id="cb1-7"><a href="#cb1-7"></a></span>
 <span id="cb1-8"><a href="#cb1-8"></a>knitr<span class="op">::</span>opts_chunk<span class="op">$</span><span class="kw">set</span>(<span class="dt">echo =</span> <span class="ot">TRUE</span>, <span class="dt">warning =</span> <span class="ot">FALSE</span>, <span class="dt">message =</span> <span class="ot">FALSE</span>,</span>
 <span id="cb1-9"><a href="#cb1-9"></a>                      <span class="dt">cache =</span> F)</span>
-<span id="cb1-10"><a href="#cb1-10"></a>opts &lt;-<span class="st"> </span><span class="kw">options</span>(<span class="dt">knitr.kable.NA=</span><span class="st">&#39;&#39;</span>)</span>
-<span id="cb1-11"><a href="#cb1-11"></a><span class="co"># all_subjects &lt;- vroom(here(&#39;data/raw/all_rows_data_2020-01-31_1545.csv&#39;),</span></span>
-<span id="cb1-12"><a href="#cb1-12"></a><span class="co">#                       col_select = c(subjectId, visit = folderName, eventIndex)) %&gt;%</span></span>
-<span id="cb1-13"><a href="#cb1-13"></a><span class="co">#   distinct() %&gt;%</span></span>
-<span id="cb1-14"><a href="#cb1-14"></a><span class="co">#   mutate(folderName = fct_relevel(visit, &#39;Baseline&#39;,&#39;6 month&#39;,&#39;12 month&#39;,&#39;18 month&#39;,&#39;24 month&#39;)) %&gt;%</span></span>
-<span id="cb1-15"><a href="#cb1-15"></a><span class="co">#   select(-folderName) %&gt;%</span></span>
-<span id="cb1-16"><a href="#cb1-16"></a><span class="co">#   clean_names()</span></span>
-<span id="cb1-17"><a href="#cb1-17"></a><span class="co"># saveRDS(all_subjects, here(&#39;data/rda/all_subjects.rds&#39;), compress=T)</span></span>
-<span id="cb1-18"><a href="#cb1-18"></a>all_subjects &lt;-<span class="st"> </span><span class="kw">readRDS</span>(<span class="kw">here</span>(<span class="st">&#39;data/rda/all_subjects.rds&#39;</span>))</span></code></pre></div>
+<span id="cb1-10"><a href="#cb1-10"></a><span class="co"># all_subjects &lt;- vroom(here(&#39;data/raw/all_rows_data_2020-01-31_1545.csv&#39;),</span></span>
+<span id="cb1-11"><a href="#cb1-11"></a><span class="co">#                       col_select = c(subjectId, visit = folderName, eventIndex)) %&gt;%</span></span>
+<span id="cb1-12"><a href="#cb1-12"></a><span class="co">#   distinct() %&gt;%</span></span>
+<span id="cb1-13"><a href="#cb1-13"></a><span class="co">#   mutate(folderName = fct_relevel(visit, &#39;Baseline&#39;,&#39;6 month&#39;,&#39;12 month&#39;,&#39;18 month&#39;,&#39;24 month&#39;)) %&gt;%</span></span>
+<span id="cb1-14"><a href="#cb1-14"></a><span class="co">#   select(-folderName) %&gt;%</span></span>
+<span id="cb1-15"><a href="#cb1-15"></a><span class="co">#   clean_names()</span></span>
+<span id="cb1-16"><a href="#cb1-16"></a><span class="co"># saveRDS(all_subjects, here(&#39;data/rda/all_subjects.rds&#39;), compress=T)</span></span>
+<span id="cb1-17"><a href="#cb1-17"></a>all_subjects &lt;-<span class="st"> </span><span class="kw">readRDS</span>(<span class="kw">here</span>(<span class="st">&#39;data/rda/all_subjects.rds&#39;</span>))</span></code></pre></div>
 <p><strong>Data version:</strong> The version of data we’re using is from 2020-01-31 15:45.</p>
 <div id="principle-1-20-to-75-of-children-with-sle-will-develop-nephritis" class="section level2">
 <h2>Principle 1 : 20% to 75% of children with SLE will develop nephritis</h2>
@@ -2958,18 +2957,19 @@ Yes
 <div id="dialysis-transplant-and-esrd" class="section level2">
 <h2>Dialysis, transplant and ESRD</h2>
 <p>All these outcomes are sparse in this data set, even on restricting to subjects who have been diagnosed with lupus nephritis</p>
-<div class="sourceCode" id="cb22"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1"></a>prin4<span class="op">$</span>dialysis <span class="op">%&gt;%</span></span>
-<span id="cb22-2"><a href="#cb22-2"></a><span class="st">  </span><span class="kw">tabyl</span>() <span class="op">%&gt;%</span></span>
+<div class="sourceCode" id="cb22"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1"></a>prin4 <span class="op">%&gt;%</span></span>
+<span id="cb22-2"><a href="#cb22-2"></a><span class="st">  </span><span class="kw">tabyl</span>(dialysis) <span class="op">%&gt;%</span></span>
 <span id="cb22-3"><a href="#cb22-3"></a><span class="st">  </span><span class="kw">mutate_at</span>(<span class="kw">vars</span>(<span class="kw">contains</span>(<span class="st">&#39;percent&#39;</span>)), <span class="op">~</span><span class="dv">100</span><span class="op">*</span>.x) <span class="op">%&gt;%</span></span>
-<span id="cb22-4"><a href="#cb22-4"></a><span class="st">  </span><span class="kw">kable</span>(<span class="dt">caption =</span> <span class="st">&#39;Frequency distribution for dialysis&#39;</span>)</span></code></pre></div>
-<table>
+<span id="cb22-4"><a href="#cb22-4"></a><span class="st">  </span><span class="kw">kable</span>(<span class="dt">caption =</span> <span class="st">&#39;Frequency distribution for dialysis&#39;</span>, <span class="dt">digits=</span><span class="dv">2</span>) <span class="op">%&gt;%</span></span>
+<span id="cb22-5"><a href="#cb22-5"></a><span class="st">  </span><span class="kw">kable_styling</span>(<span class="dt">full_width =</span> F)</span></code></pre></div>
+<table class="table" style="width: auto !important; margin-left: auto; margin-right: auto;">
 <caption>
 Frequency distribution for dialysis
 </caption>
 <thead>
 <tr>
 <th style="text-align:left;">
-.
+dialysis
 </th>
 <th style="text-align:right;">
 n
@@ -2994,7 +2994,7 @@ Don’t Know
 0.48
 </td>
 <td style="text-align:right;">
-21.42857
+21.43
 </td>
 </tr>
 <tr>
@@ -3008,7 +3008,7 @@ No
 1.28
 </td>
 <td style="text-align:right;">
-57.14286
+57.14
 </td>
 </tr>
 <tr>
@@ -3022,11 +3022,12 @@ Yes
 0.48
 </td>
 <td style="text-align:right;">
-21.42857
+21.43
 </td>
 </tr>
 <tr>
 <td style="text-align:left;">
+NA
 </td>
 <td style="text-align:right;">
 611
@@ -3035,22 +3036,24 @@ Yes
 97.76
 </td>
 <td style="text-align:right;">
+NA
 </td>
 </tr>
 </tbody>
 </table>
-<div class="sourceCode" id="cb23"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1"></a>prin4<span class="op">$</span>transplant <span class="op">%&gt;%</span></span>
-<span id="cb23-2"><a href="#cb23-2"></a><span class="st">  </span><span class="kw">tabyl</span>() <span class="op">%&gt;%</span></span>
+<div class="sourceCode" id="cb23"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1"></a>prin4 <span class="op">%&gt;%</span></span>
+<span id="cb23-2"><a href="#cb23-2"></a><span class="st">  </span><span class="kw">tabyl</span>(transplant) <span class="op">%&gt;%</span></span>
 <span id="cb23-3"><a href="#cb23-3"></a><span class="st">  </span><span class="kw">mutate_at</span>(<span class="kw">vars</span>(<span class="kw">contains</span>(<span class="st">&#39;percent&#39;</span>)), <span class="op">~</span><span class="dv">100</span><span class="op">*</span>.x) <span class="op">%&gt;%</span></span>
-<span id="cb23-4"><a href="#cb23-4"></a><span class="st">  </span><span class="kw">kable</span>(<span class="dt">caption =</span> <span class="st">&#39;Frequency distribution for transplant&#39;</span>)</span></code></pre></div>
-<table>
+<span id="cb23-4"><a href="#cb23-4"></a><span class="st">  </span><span class="kw">kable</span>(<span class="dt">caption =</span> <span class="st">&#39;Frequency distribution for transplant&#39;</span>, <span class="dt">digits=</span><span class="dv">2</span>)<span class="op">%&gt;%</span></span>
+<span id="cb23-5"><a href="#cb23-5"></a><span class="st">  </span><span class="kw">kable_styling</span>(<span class="dt">full_width =</span> F)</span></code></pre></div>
+<table class="table" style="width: auto !important; margin-left: auto; margin-right: auto;">
 <caption>
 Frequency distribution for transplant
 </caption>
 <thead>
 <tr>
 <th style="text-align:left;">
-.
+transplant
 </th>
 <th style="text-align:right;">
 n
@@ -3080,6 +3083,7 @@ No
 </tr>
 <tr>
 <td style="text-align:left;">
+NA
 </td>
 <td style="text-align:right;">
 611
@@ -3088,22 +3092,24 @@ No
 97.76
 </td>
 <td style="text-align:right;">
+NA
 </td>
 </tr>
 </tbody>
 </table>
-<div class="sourceCode" id="cb24"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1"></a>prin4<span class="op">$</span>esrd <span class="op">%&gt;%</span></span>
-<span id="cb24-2"><a href="#cb24-2"></a><span class="st">  </span><span class="kw">tabyl</span>() <span class="op">%&gt;%</span></span>
+<div class="sourceCode" id="cb24"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1"></a>prin4 <span class="op">%&gt;%</span></span>
+<span id="cb24-2"><a href="#cb24-2"></a><span class="st">  </span><span class="kw">tabyl</span>(esrd) <span class="op">%&gt;%</span></span>
 <span id="cb24-3"><a href="#cb24-3"></a><span class="st">  </span><span class="kw">mutate_at</span>(<span class="kw">vars</span>(<span class="kw">contains</span>(<span class="st">&#39;percent&#39;</span>)), <span class="op">~</span><span class="dv">100</span><span class="op">*</span>.x) <span class="op">%&gt;%</span></span>
-<span id="cb24-4"><a href="#cb24-4"></a><span class="st">  </span><span class="kw">kable</span>(<span class="dt">caption =</span> <span class="st">&#39;Frequency distribution for ESRD&#39;</span>)</span></code></pre></div>
-<table>
+<span id="cb24-4"><a href="#cb24-4"></a><span class="st">  </span><span class="kw">kable</span>(<span class="dt">caption =</span> <span class="st">&#39;Frequency distribution for ESRD&#39;</span>, <span class="dt">digits=</span><span class="dv">2</span>)<span class="op">%&gt;%</span></span>
+<span id="cb24-5"><a href="#cb24-5"></a><span class="st">  </span><span class="kw">kable_styling</span>(<span class="dt">full_width =</span> F)</span></code></pre></div>
+<table class="table" style="width: auto !important; margin-left: auto; margin-right: auto;">
 <caption>
 Frequency distribution for ESRD
 </caption>
 <thead>
 <tr>
 <th style="text-align:right;">
-.
+esrd
 </th>
 <th style="text-align:right;">
 n
@@ -3128,7 +3134,7 @@ valid_percent
 97.92
 </td>
 <td style="text-align:right;">
-98.550725
+98.55
 </td>
 </tr>
 <tr>
@@ -3142,11 +3148,12 @@ valid_percent
 1.44
 </td>
 <td style="text-align:right;">
-1.449275
+1.45
 </td>
 </tr>
 <tr>
 <td style="text-align:right;">
+NA
 </td>
 <td style="text-align:right;">
 4
@@ -3155,6 +3162,7 @@ valid_percent
 0.64
 </td>
 <td style="text-align:right;">
+NA
 </td>
 </tr>
 </tbody>
@@ -3239,6 +3247,7 @@ Stage 3
 </tr>
 <tr>
 <td style="text-align:left;">
+NA
 </td>
 <td style="text-align:right;">
 54
@@ -3247,6 +3256,7 @@ Stage 3
 23.0769231
 </td>
 <td style="text-align:right;">
+NA
 </td>
 </tr>
 </tbody>
@@ -3363,15 +3373,18 @@ Stage 3
 <span id="cb27-5"><a href="#cb27-5"></a><span class="st">  </span><span class="kw">ungroup</span>() <span class="op">%&gt;%</span></span>
 <span id="cb27-6"><a href="#cb27-6"></a><span class="st">  </span><span class="kw">select</span>(subject_id, event_index, gfr_class, gets_to_remission) <span class="op">%&gt;%</span></span>
 <span id="cb27-7"><a href="#cb27-7"></a><span class="st">  </span><span class="kw">filter</span>(<span class="op">!</span><span class="kw">is.na</span>(gfr_class)) <span class="op">%&gt;%</span></span>
-<span id="cb27-8"><a href="#cb27-8"></a><span class="st">  </span><span class="kw">tabyl</span>(gets_to_remission, gfr_class) -&gt;<span class="st"> </span>tab_gfr_remission</span>
-<span id="cb27-9"><a href="#cb27-9"></a></span>
-<span id="cb27-10"><a href="#cb27-10"></a>tab_gfr_remission <span class="op">%&gt;%</span></span>
-<span id="cb27-11"><a href="#cb27-11"></a><span class="st">  </span><span class="kw">adorn_percentages</span>(<span class="st">&#39;col&#39;</span>) <span class="op">%&gt;%</span></span>
-<span id="cb27-12"><a href="#cb27-12"></a><span class="st">  </span><span class="kw">adorn_pct_formatting</span>() <span class="op">%&gt;%</span></span>
-<span id="cb27-13"><a href="#cb27-13"></a><span class="st">  </span><span class="kw">adorn_ns</span>() <span class="op">%&gt;%</span></span>
-<span id="cb27-14"><a href="#cb27-14"></a><span class="st">  </span><span class="kw">adorn_title</span>() <span class="op">%&gt;%</span></span>
-<span id="cb27-15"><a href="#cb27-15"></a><span class="st">  </span><span class="kw">kable</span>(<span class="dt">caption =</span> <span class="st">&#39;Chance of getting to remission by GFR class at LN diagnosis&#39;</span>) <span class="op">%&gt;%</span></span>
-<span id="cb27-16"><a href="#cb27-16"></a><span class="st">  </span><span class="kw">kable_styling</span>()</span></code></pre></div>
+<span id="cb27-8"><a href="#cb27-8"></a><span class="st">  </span><span class="kw">rename</span>(<span class="dt">Remission =</span> gets_to_remission, <span class="st">`</span><span class="dt">GFR class</span><span class="st">`</span> =<span class="st"> </span>gfr_class) <span class="op">%&gt;%</span></span>
+<span id="cb27-9"><a href="#cb27-9"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Remission =</span> <span class="kw">ifelse</span>(Remission<span class="op">==</span><span class="dv">1</span>, <span class="st">&#39;Yes&#39;</span>,<span class="st">&#39;No&#39;</span>)) <span class="op">%&gt;%</span></span>
+<span id="cb27-10"><a href="#cb27-10"></a><span class="st">  </span><span class="kw">rename</span>(<span class="st">`</span><span class="dt">Ever in remission</span><span class="st">`</span> =<span class="st"> </span>Remission) <span class="op">%&gt;%</span></span>
+<span id="cb27-11"><a href="#cb27-11"></a><span class="st">  </span><span class="kw">tabyl</span>(<span class="st">`</span><span class="dt">Ever in remission</span><span class="st">`</span>, <span class="st">`</span><span class="dt">GFR class</span><span class="st">`</span>) -&gt;<span class="st"> </span>tab_gfr_remission</span>
+<span id="cb27-12"><a href="#cb27-12"></a></span>
+<span id="cb27-13"><a href="#cb27-13"></a>tab_gfr_remission <span class="op">%&gt;%</span></span>
+<span id="cb27-14"><a href="#cb27-14"></a><span class="st">  </span><span class="kw">adorn_percentages</span>(<span class="st">&#39;col&#39;</span>) <span class="op">%&gt;%</span></span>
+<span id="cb27-15"><a href="#cb27-15"></a><span class="st">  </span><span class="kw">adorn_pct_formatting</span>() <span class="op">%&gt;%</span></span>
+<span id="cb27-16"><a href="#cb27-16"></a><span class="st">  </span><span class="kw">adorn_ns</span>() <span class="op">%&gt;%</span></span>
+<span id="cb27-17"><a href="#cb27-17"></a><span class="st">  </span><span class="kw">adorn_title</span>() <span class="op">%&gt;%</span></span>
+<span id="cb27-18"><a href="#cb27-18"></a><span class="st">  </span><span class="kw">kable</span>(<span class="dt">caption =</span> <span class="st">&#39;Chance of getting to remission by GFR class at LN diagnosis&#39;</span>) <span class="op">%&gt;%</span></span>
+<span id="cb27-19"><a href="#cb27-19"></a><span class="st">  </span><span class="kw">kable_styling</span>()</span></code></pre></div>
 <table class="table" style="margin-left: auto; margin-right: auto;">
 <caption>
 Chance of getting to remission by GFR class at LN diagnosis
@@ -3381,7 +3394,7 @@ Chance of getting to remission by GFR class at LN diagnosis
 <th style="text-align:left;">
 </th>
 <th style="text-align:left;">
-gfr_class
+GFR class
 </th>
 <th style="text-align:left;">
 </th>
@@ -3392,7 +3405,7 @@ gfr_class
 <tbody>
 <tr>
 <td style="text-align:left;">
-gets_to_remission
+Ever in remission
 </td>
 <td style="text-align:left;">
 Stage 1
@@ -3406,7 +3419,7 @@ Stage 3
 </tr>
 <tr>
 <td style="text-align:left;">
-0
+No
 </td>
 <td style="text-align:left;">
 66.7% (28)
@@ -3420,7 +3433,7 @@ Stage 3
 </tr>
 <tr>
 <td style="text-align:left;">
-1
+Yes
 </td>
 <td style="text-align:left;">
 33.3% (14)
@@ -3435,35 +3448,37 @@ Stage 3
 </tbody>
 </table>
 <p>A Fishers exact test gives a p-value of 0.4572083.</p>
-<div class="sourceCode" id="cb28"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1"></a><span class="co">## Dialysis, transplant and ESRD</span></span></code></pre></div>
+</div>
+<div id="dialysis-transplant-and-esrd-1" class="section level2">
+<h2>Dialysis, transplant and ESRD</h2>
 <p>As we saw earlier, we don’t have sufficient information on these outcomes for this subset of subject who are LN-positive to assess how GFR stage at diagnosis is associated with them.</p>
 </div>
 <div id="principle-6-rituximab-has-been-used-as-a-steroid-sparing-agent-for-induction-in-proliferative-ln-ln-vs-no-ln-3-4-vs-5" class="section level2">
 <h2>Principle 6: Rituximab has been used as a steroid-sparing agent for induction in proliferative LN (LN vs no-LN, 3-4 vs 5)</h2>
 <p>Rituximab use: IMMMED = 30 MEDCATON = 30</p>
-<div class="sourceCode" id="cb29"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1"></a><span class="co"># Principle 6 -------------------------------------------------------------</span></span>
-<span id="cb29-2"><a href="#cb29-2"></a></span>
-<span id="cb29-3"><a href="#cb29-3"></a>raw_biopsy &lt;-<span class="st"> </span><span class="kw">readRDS</span>(<span class="kw">here</span>(<span class="st">&#39;data/rda/biopsy_classes.rds&#39;</span>)) <span class="co"># Updated for LN34+5 class</span></span>
-<span id="cb29-4"><a href="#cb29-4"></a>all_rows &lt;-<span class="st"> </span><span class="kw">vroom</span>(<span class="kw">here</span>(<span class="st">&#39;data/raw/all_rows_data_2020-01-31_1545.csv&#39;</span>))</span>
-<span id="cb29-5"><a href="#cb29-5"></a>ritux &lt;-<span class="st"> </span>all_rows <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">filter</span>(conceptValue<span class="op">==</span><span class="st">&#39;Rituximab (Rituxan)&#39;</span>) <span class="op">%&gt;%</span></span>
-<span id="cb29-6"><a href="#cb29-6"></a><span class="st">  </span><span class="kw">clean_names</span>() <span class="op">%&gt;%</span></span>
-<span id="cb29-7"><a href="#cb29-7"></a><span class="st">  </span><span class="kw">select</span>(subject_id, <span class="dt">ritux =</span> concept_value) <span class="op">%&gt;%</span></span>
-<span id="cb29-8"><a href="#cb29-8"></a><span class="st">  </span><span class="kw">distinct</span>()</span>
-<span id="cb29-9"><a href="#cb29-9"></a><span class="co">## LN_classes was created in Principle 3</span></span>
-<span id="cb29-10"><a href="#cb29-10"></a>LN_classes &lt;-<span class="st"> </span><span class="kw">readRDS</span>(<span class="kw">here</span>(<span class="st">&#39;data/rda/LN_classes.rds&#39;</span>))</span>
-<span id="cb29-11"><a href="#cb29-11"></a>tab_rtx_ln &lt;-<span class="st"> </span>LN_classes  <span class="op">%&gt;%</span></span>
-<span id="cb29-12"><a href="#cb29-12"></a><span class="st">  </span><span class="kw">left_join</span>(ritux) <span class="op">%&gt;%</span></span>
-<span id="cb29-13"><a href="#cb29-13"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Rituximab =</span> <span class="kw">ifelse</span>(<span class="kw">is.na</span>(ritux), <span class="st">&#39;No&#39;</span>,<span class="st">&#39;Yes&#39;</span>),</span>
-<span id="cb29-14"><a href="#cb29-14"></a>         <span class="dt">LN =</span> <span class="kw">ifelse</span>(<span class="kw">is.na</span>(LN),<span class="st">&#39;Neg&#39;</span>, <span class="st">&#39;Pos&#39;</span>)) <span class="op">%&gt;%</span></span>
-<span id="cb29-15"><a href="#cb29-15"></a><span class="st">  </span><span class="kw">tabyl</span>(Rituximab, LN)</span>
-<span id="cb29-16"><a href="#cb29-16"></a>tab_rtx_ln <span class="op">%&gt;%</span></span>
-<span id="cb29-17"><a href="#cb29-17"></a><span class="st">  </span><span class="kw">adorn_percentages</span>(<span class="st">&#39;col&#39;</span>) <span class="op">%&gt;%</span></span>
-<span id="cb29-18"><a href="#cb29-18"></a><span class="st">  </span><span class="kw">adorn_totals</span>(<span class="st">&#39;row&#39;</span>) <span class="op">%&gt;%</span></span>
-<span id="cb29-19"><a href="#cb29-19"></a><span class="st">  </span><span class="kw">adorn_pct_formatting</span>() <span class="op">%&gt;%</span></span>
-<span id="cb29-20"><a href="#cb29-20"></a><span class="st">  </span><span class="kw">adorn_ns</span>() <span class="op">%&gt;%</span></span>
-<span id="cb29-21"><a href="#cb29-21"></a><span class="st">  </span><span class="kw">adorn_title</span>() <span class="op">%&gt;%</span></span>
-<span id="cb29-22"><a href="#cb29-22"></a><span class="st">  </span>knitr<span class="op">::</span><span class="kw">kable</span>(<span class="dt">caption =</span> <span class="st">&#39;Rituximab use between LN and non-LN subjects&#39;</span>) <span class="op">%&gt;%</span></span>
-<span id="cb29-23"><a href="#cb29-23"></a><span class="st">  </span><span class="kw">kable_styling</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb28"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1"></a><span class="co"># Principle 6 -------------------------------------------------------------</span></span>
+<span id="cb28-2"><a href="#cb28-2"></a></span>
+<span id="cb28-3"><a href="#cb28-3"></a>raw_biopsy &lt;-<span class="st"> </span><span class="kw">readRDS</span>(<span class="kw">here</span>(<span class="st">&#39;data/rda/biopsy_classes.rds&#39;</span>)) <span class="co"># Updated for LN34+5 class</span></span>
+<span id="cb28-4"><a href="#cb28-4"></a>all_rows &lt;-<span class="st"> </span><span class="kw">vroom</span>(<span class="kw">here</span>(<span class="st">&#39;data/raw/all_rows_data_2020-01-31_1545.csv&#39;</span>))</span>
+<span id="cb28-5"><a href="#cb28-5"></a>ritux &lt;-<span class="st"> </span>all_rows <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">filter</span>(conceptValue<span class="op">==</span><span class="st">&#39;Rituximab (Rituxan)&#39;</span>) <span class="op">%&gt;%</span></span>
+<span id="cb28-6"><a href="#cb28-6"></a><span class="st">  </span><span class="kw">clean_names</span>() <span class="op">%&gt;%</span></span>
+<span id="cb28-7"><a href="#cb28-7"></a><span class="st">  </span><span class="kw">select</span>(subject_id, <span class="dt">ritux =</span> concept_value) <span class="op">%&gt;%</span></span>
+<span id="cb28-8"><a href="#cb28-8"></a><span class="st">  </span><span class="kw">distinct</span>()</span>
+<span id="cb28-9"><a href="#cb28-9"></a><span class="co">## LN_classes was created in Principle 3</span></span>
+<span id="cb28-10"><a href="#cb28-10"></a>LN_classes &lt;-<span class="st"> </span><span class="kw">readRDS</span>(<span class="kw">here</span>(<span class="st">&#39;data/rda/LN_classes.rds&#39;</span>))</span>
+<span id="cb28-11"><a href="#cb28-11"></a>tab_rtx_ln &lt;-<span class="st"> </span>LN_classes  <span class="op">%&gt;%</span></span>
+<span id="cb28-12"><a href="#cb28-12"></a><span class="st">  </span><span class="kw">left_join</span>(ritux) <span class="op">%&gt;%</span></span>
+<span id="cb28-13"><a href="#cb28-13"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Rituximab =</span> <span class="kw">ifelse</span>(<span class="kw">is.na</span>(ritux), <span class="st">&#39;No&#39;</span>,<span class="st">&#39;Yes&#39;</span>),</span>
+<span id="cb28-14"><a href="#cb28-14"></a>         <span class="dt">LN =</span> <span class="kw">ifelse</span>(<span class="kw">is.na</span>(LN),<span class="st">&#39;Neg&#39;</span>, <span class="st">&#39;Pos&#39;</span>)) <span class="op">%&gt;%</span></span>
+<span id="cb28-15"><a href="#cb28-15"></a><span class="st">  </span><span class="kw">tabyl</span>(Rituximab, LN)</span>
+<span id="cb28-16"><a href="#cb28-16"></a>tab_rtx_ln <span class="op">%&gt;%</span></span>
+<span id="cb28-17"><a href="#cb28-17"></a><span class="st">  </span><span class="kw">adorn_percentages</span>(<span class="st">&#39;col&#39;</span>) <span class="op">%&gt;%</span></span>
+<span id="cb28-18"><a href="#cb28-18"></a><span class="st">  </span><span class="kw">adorn_totals</span>(<span class="st">&#39;row&#39;</span>) <span class="op">%&gt;%</span></span>
+<span id="cb28-19"><a href="#cb28-19"></a><span class="st">  </span><span class="kw">adorn_pct_formatting</span>() <span class="op">%&gt;%</span></span>
+<span id="cb28-20"><a href="#cb28-20"></a><span class="st">  </span><span class="kw">adorn_ns</span>() <span class="op">%&gt;%</span></span>
+<span id="cb28-21"><a href="#cb28-21"></a><span class="st">  </span><span class="kw">adorn_title</span>() <span class="op">%&gt;%</span></span>
+<span id="cb28-22"><a href="#cb28-22"></a><span class="st">  </span>knitr<span class="op">::</span><span class="kw">kable</span>(<span class="dt">caption =</span> <span class="st">&#39;Rituximab use between LN and non-LN subjects&#39;</span>) <span class="op">%&gt;%</span></span>
+<span id="cb28-23"><a href="#cb28-23"></a><span class="st">  </span><span class="kw">kable_styling</span>()</span></code></pre></div>
 <table class="table" style="margin-left: auto; margin-right: auto;">
 <caption>
 Rituximab use between LN and non-LN subjects
@@ -3527,26 +3542,26 @@ Total
 </tbody>
 </table>
 <p>This is statistically significant, with the <span class="math inline">\(\chi^2\)</span> test p-value being <span class="math inline">\(6.8 \times 10^{-5}\)</span>.</p>
-<div class="sourceCode" id="cb30"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1"></a>tbl_rit_class &lt;-<span class="st"> </span>LN_classes <span class="op">%&gt;%</span></span>
-<span id="cb30-2"><a href="#cb30-2"></a><span class="st">  </span><span class="kw">left_join</span>(ritux) <span class="op">%&gt;%</span></span>
-<span id="cb30-3"><a href="#cb30-3"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Rituximab =</span> <span class="kw">ifelse</span>(<span class="kw">is.na</span>(ritux), <span class="st">&#39;No&#39;</span>, <span class="st">&#39;Yes&#39;</span>)) <span class="op">%&gt;%</span></span>
-<span id="cb30-4"><a href="#cb30-4"></a><span class="st">  </span><span class="kw">filter</span>(<span class="op">!</span><span class="kw">is.na</span>(LN)) <span class="op">%&gt;%</span></span>
-<span id="cb30-5"><a href="#cb30-5"></a><span class="st">  </span><span class="kw">select</span>(subject_id, LN34<span class="op">:</span>LN50, Rituximab) <span class="op">%&gt;%</span></span>
-<span id="cb30-6"><a href="#cb30-6"></a><span class="st">  </span><span class="kw">rename</span>(<span class="st">`</span><span class="dt">III/IV</span><span class="st">`</span> =<span class="st"> </span>LN34,</span>
-<span id="cb30-7"><a href="#cb30-7"></a>         <span class="st">`</span><span class="dt">III/IV + V</span><span class="st">`</span> =<span class="st"> </span>LN345,</span>
-<span id="cb30-8"><a href="#cb30-8"></a>         <span class="st">`</span><span class="dt">V only</span><span class="st">`</span> =<span class="st"> </span>LN50) <span class="op">%&gt;%</span></span>
-<span id="cb30-9"><a href="#cb30-9"></a><span class="st">  </span><span class="kw">gather</span>(Class, value, <span class="st">`</span><span class="dt">III/IV</span><span class="st">`</span><span class="op">:</span><span class="st">`</span><span class="dt">V only</span><span class="st">`</span>) <span class="op">%&gt;%</span></span>
-<span id="cb30-10"><a href="#cb30-10"></a><span class="st">  </span><span class="kw">filter</span>(value<span class="op">==</span><span class="dv">1</span>) <span class="op">%&gt;%</span></span>
-<span id="cb30-11"><a href="#cb30-11"></a><span class="st">  </span><span class="kw">tabyl</span>(Class, Rituximab)</span>
-<span id="cb30-12"><a href="#cb30-12"></a></span>
-<span id="cb30-13"><a href="#cb30-13"></a>tbl_rit_class <span class="op">%&gt;%</span></span>
-<span id="cb30-14"><a href="#cb30-14"></a><span class="st">  </span><span class="kw">adorn_percentages</span>(<span class="st">&#39;col&#39;</span>) <span class="op">%&gt;%</span></span>
-<span id="cb30-15"><a href="#cb30-15"></a><span class="st">  </span><span class="kw">adorn_totals</span>() <span class="op">%&gt;%</span></span>
-<span id="cb30-16"><a href="#cb30-16"></a><span class="st">  </span><span class="kw">adorn_pct_formatting</span>() <span class="op">%&gt;%</span></span>
-<span id="cb30-17"><a href="#cb30-17"></a><span class="st">  </span><span class="kw">adorn_ns</span>() <span class="op">%&gt;%</span></span>
-<span id="cb30-18"><a href="#cb30-18"></a><span class="st">  </span><span class="kw">adorn_title</span>() <span class="op">%&gt;%</span></span>
-<span id="cb30-19"><a href="#cb30-19"></a><span class="st">  </span><span class="kw">kable</span>(<span class="dt">caption =</span> <span class="st">&#39;Rituximab use by LN class&#39;</span>) <span class="op">%&gt;%</span></span>
-<span id="cb30-20"><a href="#cb30-20"></a><span class="st">  </span><span class="kw">kable_styling</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb29"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1"></a>tbl_rit_class &lt;-<span class="st"> </span>LN_classes <span class="op">%&gt;%</span></span>
+<span id="cb29-2"><a href="#cb29-2"></a><span class="st">  </span><span class="kw">left_join</span>(ritux) <span class="op">%&gt;%</span></span>
+<span id="cb29-3"><a href="#cb29-3"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Rituximab =</span> <span class="kw">ifelse</span>(<span class="kw">is.na</span>(ritux), <span class="st">&#39;No&#39;</span>, <span class="st">&#39;Yes&#39;</span>)) <span class="op">%&gt;%</span></span>
+<span id="cb29-4"><a href="#cb29-4"></a><span class="st">  </span><span class="kw">filter</span>(<span class="op">!</span><span class="kw">is.na</span>(LN)) <span class="op">%&gt;%</span></span>
+<span id="cb29-5"><a href="#cb29-5"></a><span class="st">  </span><span class="kw">select</span>(subject_id, LN34<span class="op">:</span>LN50, Rituximab) <span class="op">%&gt;%</span></span>
+<span id="cb29-6"><a href="#cb29-6"></a><span class="st">  </span><span class="kw">rename</span>(<span class="st">`</span><span class="dt">III/IV</span><span class="st">`</span> =<span class="st"> </span>LN34,</span>
+<span id="cb29-7"><a href="#cb29-7"></a>         <span class="st">`</span><span class="dt">III/IV + V</span><span class="st">`</span> =<span class="st"> </span>LN345,</span>
+<span id="cb29-8"><a href="#cb29-8"></a>         <span class="st">`</span><span class="dt">V only</span><span class="st">`</span> =<span class="st"> </span>LN50) <span class="op">%&gt;%</span></span>
+<span id="cb29-9"><a href="#cb29-9"></a><span class="st">  </span><span class="kw">gather</span>(Class, value, <span class="st">`</span><span class="dt">III/IV</span><span class="st">`</span><span class="op">:</span><span class="st">`</span><span class="dt">V only</span><span class="st">`</span>) <span class="op">%&gt;%</span></span>
+<span id="cb29-10"><a href="#cb29-10"></a><span class="st">  </span><span class="kw">filter</span>(value<span class="op">==</span><span class="dv">1</span>) <span class="op">%&gt;%</span></span>
+<span id="cb29-11"><a href="#cb29-11"></a><span class="st">  </span><span class="kw">tabyl</span>(Class, Rituximab)</span>
+<span id="cb29-12"><a href="#cb29-12"></a></span>
+<span id="cb29-13"><a href="#cb29-13"></a>tbl_rit_class <span class="op">%&gt;%</span></span>
+<span id="cb29-14"><a href="#cb29-14"></a><span class="st">  </span><span class="kw">adorn_percentages</span>(<span class="st">&#39;col&#39;</span>) <span class="op">%&gt;%</span></span>
+<span id="cb29-15"><a href="#cb29-15"></a><span class="st">  </span><span class="kw">adorn_totals</span>() <span class="op">%&gt;%</span></span>
+<span id="cb29-16"><a href="#cb29-16"></a><span class="st">  </span><span class="kw">adorn_pct_formatting</span>() <span class="op">%&gt;%</span></span>
+<span id="cb29-17"><a href="#cb29-17"></a><span class="st">  </span><span class="kw">adorn_ns</span>() <span class="op">%&gt;%</span></span>
+<span id="cb29-18"><a href="#cb29-18"></a><span class="st">  </span><span class="kw">adorn_title</span>() <span class="op">%&gt;%</span></span>
+<span id="cb29-19"><a href="#cb29-19"></a><span class="st">  </span><span class="kw">kable</span>(<span class="dt">caption =</span> <span class="st">&#39;Rituximab use by LN class&#39;</span>) <span class="op">%&gt;%</span></span>
+<span id="cb29-20"><a href="#cb29-20"></a><span class="st">  </span><span class="kw">kable_styling</span>()</span></code></pre></div>
 <table class="table" style="margin-left: auto; margin-right: auto;">
 <caption>
 Rituximab use by LN class
@@ -3623,16 +3638,16 @@ Total
 <p>This is not statistically significant (p-value = 0.8576421)</p>
 <div id="is-there-differences-in-agegender-for-people-getting-rituximab" class="section level3">
 <h3>Is there differences in age/gender for people getting Rituximab</h3>
-<div class="sourceCode" id="cb31"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1"></a>demographic &lt;-<span class="st"> </span><span class="kw">readRDS</span>(<span class="kw">here</span>(<span class="st">&#39;data/rda/demographic.rds&#39;</span>))</span>
-<span id="cb31-2"><a href="#cb31-2"></a>bl &lt;-<span class="st"> </span>demographic <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">left_join</span>(slicc_info) <span class="op">%&gt;%</span></span>
-<span id="cb31-3"><a href="#cb31-3"></a><span class="st">  </span><span class="kw">rename</span>(<span class="dt">ritux =</span> slicc00) <span class="op">%&gt;%</span></span>
-<span id="cb31-4"><a href="#cb31-4"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">ritux =</span> <span class="kw">ifelse</span>(ritux<span class="op">==</span><span class="dv">1</span>, <span class="st">&#39;Yes&#39;</span>,<span class="st">&#39;No&#39;</span>))</span>
-<span id="cb31-5"><a href="#cb31-5"></a></span>
-<span id="cb31-6"><a href="#cb31-6"></a>bl <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">group_by</span>(ritux) <span class="op">%&gt;%</span></span>
-<span id="cb31-7"><a href="#cb31-7"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="st">`</span><span class="dt">Median age</span><span class="st">`</span> =<span class="st"> </span><span class="kw">median</span>(rheumage),</span>
-<span id="cb31-8"><a href="#cb31-8"></a>            <span class="dt">IQR =</span> <span class="kw">IQR</span>(rheumage)) <span class="op">%&gt;%</span></span>
-<span id="cb31-9"><a href="#cb31-9"></a><span class="st">  </span><span class="kw">kable</span>(<span class="dt">caption =</span> <span class="st">&#39;Rituximab use by age&#39;</span>) <span class="op">%&gt;%</span></span>
-<span id="cb31-10"><a href="#cb31-10"></a><span class="st">  </span><span class="kw">kable_styling</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb30"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1"></a>demographic &lt;-<span class="st"> </span><span class="kw">readRDS</span>(<span class="kw">here</span>(<span class="st">&#39;data/rda/demographic.rds&#39;</span>))</span>
+<span id="cb30-2"><a href="#cb30-2"></a>bl &lt;-<span class="st"> </span>demographic <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">left_join</span>(slicc_info) <span class="op">%&gt;%</span></span>
+<span id="cb30-3"><a href="#cb30-3"></a><span class="st">  </span><span class="kw">rename</span>(<span class="dt">ritux =</span> slicc00) <span class="op">%&gt;%</span></span>
+<span id="cb30-4"><a href="#cb30-4"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">ritux =</span> <span class="kw">ifelse</span>(ritux<span class="op">==</span><span class="dv">1</span>, <span class="st">&#39;Yes&#39;</span>,<span class="st">&#39;No&#39;</span>))</span>
+<span id="cb30-5"><a href="#cb30-5"></a></span>
+<span id="cb30-6"><a href="#cb30-6"></a>bl <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">group_by</span>(ritux) <span class="op">%&gt;%</span></span>
+<span id="cb30-7"><a href="#cb30-7"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="st">`</span><span class="dt">Median age</span><span class="st">`</span> =<span class="st"> </span><span class="kw">median</span>(rheumage),</span>
+<span id="cb30-8"><a href="#cb30-8"></a>            <span class="dt">IQR =</span> <span class="kw">IQR</span>(rheumage)) <span class="op">%&gt;%</span></span>
+<span id="cb30-9"><a href="#cb30-9"></a><span class="st">  </span><span class="kw">kable</span>(<span class="dt">caption =</span> <span class="st">&#39;Rituximab use by age&#39;</span>) <span class="op">%&gt;%</span></span>
+<span id="cb30-10"><a href="#cb30-10"></a><span class="st">  </span><span class="kw">kable_styling</span>()</span></code></pre></div>
 <table class="table" style="margin-left: auto; margin-right: auto;">
 <caption>
 Rituximab use by age
@@ -3676,15 +3691,15 @@ Yes
 </tbody>
 </table>
 <p>This is not significant (Wilcoxon test p-value = 0.78)</p>
-<div class="sourceCode" id="cb32"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1"></a>tab_rit_gender &lt;-<span class="st"> </span>bl <span class="op">%&gt;%</span></span>
-<span id="cb32-2"><a href="#cb32-2"></a><span class="st">  </span><span class="kw">rename</span>(<span class="dt">Sex=</span>sex, <span class="dt">Rituximab =</span> ritux) <span class="op">%&gt;%</span></span>
-<span id="cb32-3"><a href="#cb32-3"></a><span class="st">  </span><span class="kw">tabyl</span>(Sex, Rituximab)</span>
-<span id="cb32-4"><a href="#cb32-4"></a>tab_rit_gender <span class="op">%&gt;%</span></span>
-<span id="cb32-5"><a href="#cb32-5"></a><span class="st">  </span><span class="kw">adorn_percentages</span>(<span class="st">&#39;col&#39;</span>) <span class="op">%&gt;%</span></span>
-<span id="cb32-6"><a href="#cb32-6"></a><span class="st">  </span><span class="kw">adorn_pct_formatting</span>() <span class="op">%&gt;%</span></span>
-<span id="cb32-7"><a href="#cb32-7"></a><span class="st">  </span><span class="kw">adorn_title</span>(<span class="st">&#39;combined&#39;</span>) <span class="op">%&gt;%</span></span>
-<span id="cb32-8"><a href="#cb32-8"></a><span class="st">  </span><span class="kw">kable</span>(<span class="dt">caption =</span> <span class="st">&#39;Rituximab use by gender&#39;</span>) <span class="op">%&gt;%</span></span>
-<span id="cb32-9"><a href="#cb32-9"></a><span class="st">  </span><span class="kw">kable_styling</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb31"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1"></a>tab_rit_gender &lt;-<span class="st"> </span>bl <span class="op">%&gt;%</span></span>
+<span id="cb31-2"><a href="#cb31-2"></a><span class="st">  </span><span class="kw">rename</span>(<span class="dt">Sex=</span>sex, <span class="dt">Rituximab =</span> ritux) <span class="op">%&gt;%</span></span>
+<span id="cb31-3"><a href="#cb31-3"></a><span class="st">  </span><span class="kw">tabyl</span>(Sex, Rituximab)</span>
+<span id="cb31-4"><a href="#cb31-4"></a>tab_rit_gender <span class="op">%&gt;%</span></span>
+<span id="cb31-5"><a href="#cb31-5"></a><span class="st">  </span><span class="kw">adorn_percentages</span>(<span class="st">&#39;col&#39;</span>) <span class="op">%&gt;%</span></span>
+<span id="cb31-6"><a href="#cb31-6"></a><span class="st">  </span><span class="kw">adorn_pct_formatting</span>() <span class="op">%&gt;%</span></span>
+<span id="cb31-7"><a href="#cb31-7"></a><span class="st">  </span><span class="kw">adorn_title</span>(<span class="st">&#39;combined&#39;</span>) <span class="op">%&gt;%</span></span>
+<span id="cb31-8"><a href="#cb31-8"></a><span class="st">  </span><span class="kw">kable</span>(<span class="dt">caption =</span> <span class="st">&#39;Rituximab use by gender&#39;</span>) <span class="op">%&gt;%</span></span>
+<span id="cb31-9"><a href="#cb31-9"></a><span class="st">  </span><span class="kw">kable_styling</span>()</span></code></pre></div>
 <table class="table" style="margin-left: auto; margin-right: auto;">
 <caption>
 Rituximab use by gender
@@ -3732,26 +3747,27 @@ Male
 <div id="differences-in-gfr-by-rituximab-use" class="section level3">
 <h3>Differences in GFR by Rituximab use</h3>
 <p>We will look at LN+ patients and their GFR at time of diagnosis or at baseline, and compare the GFR levels for Rituximab users and non-users</p>
-<div class="sourceCode" id="cb33"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1"></a><span class="co"># prin4 is the dataset we will use, looking at the time of diagnosis,</span></span>
-<span id="cb33-2"><a href="#cb33-2"></a><span class="co"># and then linking with Rituximab use</span></span>
-<span id="cb33-3"><a href="#cb33-3"></a></span>
-<span id="cb33-4"><a href="#cb33-4"></a>rtx_gfr &lt;-<span class="st"> </span>prin4 <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">group_by</span>(subject_id) <span class="op">%&gt;%</span></span>
-<span id="cb33-5"><a href="#cb33-5"></a><span class="st">  </span><span class="kw">filter</span>(event_index <span class="op">==</span><span class="st"> </span><span class="kw">min</span>(event_index)) <span class="op">%&gt;%</span></span>
-<span id="cb33-6"><a href="#cb33-6"></a><span class="st">  </span><span class="kw">ungroup</span>() <span class="op">%&gt;%</span></span>
-<span id="cb33-7"><a href="#cb33-7"></a><span class="st">  </span><span class="kw">left_join</span>(ritux) <span class="op">%&gt;%</span></span>
-<span id="cb33-8"><a href="#cb33-8"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Rituximab =</span> <span class="kw">ifelse</span>(<span class="kw">is.na</span>(ritux),<span class="st">&#39;No&#39;</span>,<span class="st">&#39;Yes&#39;</span>))</span>
-<span id="cb33-9"><a href="#cb33-9"></a>rtx_gfr <span class="op">%&gt;%</span></span>
-<span id="cb33-10"><a href="#cb33-10"></a><span class="st">  </span><span class="kw">group_by</span>(Rituximab) <span class="op">%&gt;%</span></span>
-<span id="cb33-11"><a href="#cb33-11"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">N =</span> <span class="kw">sum</span>(<span class="op">!</span><span class="kw">is.na</span>(eGFR)),</span>
-<span id="cb33-12"><a href="#cb33-12"></a>            <span class="dt">Mean =</span> <span class="kw">mean</span>(eGFR, <span class="dt">na.rm=</span>T),</span>
-<span id="cb33-13"><a href="#cb33-13"></a>            <span class="dt">Median =</span> <span class="kw">median</span>(eGFR, <span class="dt">na.rm=</span>T),</span>
-<span id="cb33-14"><a href="#cb33-14"></a>            <span class="dt">SD =</span> <span class="kw">sd</span>(eGFR, <span class="dt">na.rm=</span>T),</span>
-<span id="cb33-15"><a href="#cb33-15"></a>            <span class="dt">IQR =</span> <span class="kw">IQR</span>(eGFR, <span class="dt">na.rm=</span>T)) <span class="op">%&gt;%</span></span>
-<span id="cb33-16"><a href="#cb33-16"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="st">`</span><span class="dt">P-value</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="kw">wilcox.test</span>(eGFR<span class="op">~</span>Rituximab, <span class="dt">data=</span>rtx_gfr)<span class="op">$</span>p.value, <span class="ot">NA</span>)) <span class="op">%&gt;%</span></span>
-<span id="cb33-17"><a href="#cb33-17"></a><span class="st">  </span><span class="kw">kable</span>(<span class="dt">caption =</span> <span class="st">&#39;GFR summaries by Rituximab use among LN patients;</span></span>
-<span id="cb33-18"><a href="#cb33-18"></a><span class="st">        p-value based on Wilcoxon test&#39;</span>,</span>
-<span id="cb33-19"><a href="#cb33-19"></a>        <span class="dt">digits=</span><span class="dv">2</span>) <span class="op">%&gt;%</span></span>
-<span id="cb33-20"><a href="#cb33-20"></a><span class="st">  </span><span class="kw">kable_styling</span>(<span class="dt">full_width =</span> F)</span></code></pre></div>
+<div class="sourceCode" id="cb32"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1"></a><span class="co"># prin4 is the dataset we will use, looking at the time of diagnosis,</span></span>
+<span id="cb32-2"><a href="#cb32-2"></a><span class="co"># and then linking with Rituximab use</span></span>
+<span id="cb32-3"><a href="#cb32-3"></a></span>
+<span id="cb32-4"><a href="#cb32-4"></a>opts &lt;-<span class="st"> </span><span class="kw">options</span>(<span class="dt">knitr.kable.NA=</span><span class="st">&#39;&#39;</span>)</span>
+<span id="cb32-5"><a href="#cb32-5"></a>rtx_gfr &lt;-<span class="st"> </span>prin4 <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">group_by</span>(subject_id) <span class="op">%&gt;%</span></span>
+<span id="cb32-6"><a href="#cb32-6"></a><span class="st">  </span><span class="kw">filter</span>(event_index <span class="op">==</span><span class="st"> </span><span class="kw">min</span>(event_index)) <span class="op">%&gt;%</span></span>
+<span id="cb32-7"><a href="#cb32-7"></a><span class="st">  </span><span class="kw">ungroup</span>() <span class="op">%&gt;%</span></span>
+<span id="cb32-8"><a href="#cb32-8"></a><span class="st">  </span><span class="kw">left_join</span>(ritux) <span class="op">%&gt;%</span></span>
+<span id="cb32-9"><a href="#cb32-9"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Rituximab =</span> <span class="kw">ifelse</span>(<span class="kw">is.na</span>(ritux),<span class="st">&#39;No&#39;</span>,<span class="st">&#39;Yes&#39;</span>))</span>
+<span id="cb32-10"><a href="#cb32-10"></a>rtx_gfr <span class="op">%&gt;%</span></span>
+<span id="cb32-11"><a href="#cb32-11"></a><span class="st">  </span><span class="kw">group_by</span>(Rituximab) <span class="op">%&gt;%</span></span>
+<span id="cb32-12"><a href="#cb32-12"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">N =</span> <span class="kw">sum</span>(<span class="op">!</span><span class="kw">is.na</span>(eGFR)),</span>
+<span id="cb32-13"><a href="#cb32-13"></a>            <span class="dt">Mean =</span> <span class="kw">mean</span>(eGFR, <span class="dt">na.rm=</span>T),</span>
+<span id="cb32-14"><a href="#cb32-14"></a>            <span class="dt">Median =</span> <span class="kw">median</span>(eGFR, <span class="dt">na.rm=</span>T),</span>
+<span id="cb32-15"><a href="#cb32-15"></a>            <span class="dt">SD =</span> <span class="kw">sd</span>(eGFR, <span class="dt">na.rm=</span>T),</span>
+<span id="cb32-16"><a href="#cb32-16"></a>            <span class="dt">IQR =</span> <span class="kw">IQR</span>(eGFR, <span class="dt">na.rm=</span>T)) <span class="op">%&gt;%</span></span>
+<span id="cb32-17"><a href="#cb32-17"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="st">`</span><span class="dt">P-value</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="kw">wilcox.test</span>(eGFR<span class="op">~</span>Rituximab, <span class="dt">data=</span>rtx_gfr)<span class="op">$</span>p.value, <span class="ot">NA</span>)) <span class="op">%&gt;%</span></span>
+<span id="cb32-18"><a href="#cb32-18"></a><span class="st">  </span><span class="kw">kable</span>(<span class="dt">caption =</span> <span class="st">&#39;GFR summaries by Rituximab use among LN patients;</span></span>
+<span id="cb32-19"><a href="#cb32-19"></a><span class="st">        p-value based on Wilcoxon test&#39;</span>,</span>
+<span id="cb32-20"><a href="#cb32-20"></a>        <span class="dt">digits=</span><span class="dv">2</span>) <span class="op">%&gt;%</span></span>
+<span id="cb32-21"><a href="#cb32-21"></a><span class="st">  </span><span class="kw">kable_styling</span>(<span class="dt">full_width =</span> F)</span></code></pre></div>
 <table class="table" style="width: auto !important; margin-left: auto; margin-right: auto;">
 <caption>
 GFR summaries by Rituximab use among LN patients; p-value based on Wilcoxon test
@@ -3829,6 +3845,7 @@ Yes
 </tr>
 </tbody>
 </table>
+<div class="sourceCode" id="cb33"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1"></a><span class="kw">options</span>(opts)</span></code></pre></div>
 <div class="sourceCode" id="cb34"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1"></a><span class="kw">ggplot</span>(rtx_gfr, <span class="kw">aes</span>(<span class="dt">x =</span> Rituximab, <span class="dt">y =</span> eGFR))<span class="op">+</span><span class="kw">geom_violin</span>()<span class="op">+</span></span>
 <span id="cb34-2"><a href="#cb34-2"></a><span class="st">  </span>ggpubr<span class="op">::</span><span class="kw">stat_compare_means</span>(<span class="dt">method=</span><span class="st">&#39;wilcox.test&#39;</span>,</span>
 <span id="cb34-3"><a href="#cb34-3"></a>                             <span class="dt">label.x.npc =</span> <span class="fl">0.8</span>)<span class="op">+</span></span>

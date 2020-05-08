@@ -21,7 +21,6 @@ source(here('lib/R/pval_scientific.R'))
 
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE,
                       cache = F)
-opts <- options(knitr.kable.NA='')
 # all_subjects <- vroom(here('data/raw/all_rows_data_2020-01-31_1545.csv'),
 #                       col_select = c(subjectId, visit = folderName, eventIndex)) %>%
 #   distinct() %>%
@@ -478,20 +477,23 @@ tbl_black_remission %>%
 #' All these outcomes are sparse in this data set, even on restricting to
 #' subjects who have been diagnosed with lupus nephritis
 
-prin4$dialysis %>%
-  tabyl() %>%
+prin4 %>%
+  tabyl(dialysis) %>%
   mutate_at(vars(contains('percent')), ~100*.x) %>%
-  kable(caption = 'Frequency distribution for dialysis')
+  kable(caption = 'Frequency distribution for dialysis', digits=2) %>%
+  kable_styling(full_width = F)
 
-prin4$transplant %>%
-  tabyl() %>%
+prin4 %>%
+  tabyl(transplant) %>%
   mutate_at(vars(contains('percent')), ~100*.x) %>%
-  kable(caption = 'Frequency distribution for transplant')
+  kable(caption = 'Frequency distribution for transplant', digits=2)%>%
+  kable_styling(full_width = F)
 
-prin4$esrd %>%
-  tabyl() %>%
+prin4 %>%
+  tabyl(esrd) %>%
   mutate_at(vars(contains('percent')), ~100*.x) %>%
-  kable(caption = 'Frequency distribution for ESRD')
+  kable(caption = 'Frequency distribution for ESRD', digits=2)%>%
+  kable_styling(full_width = F)
 
 
 
@@ -558,7 +560,10 @@ prin4 %>% filter(subject_id %in% remission_id_mult) %>%
   ungroup() %>%
   select(subject_id, event_index, gfr_class, gets_to_remission) %>%
   filter(!is.na(gfr_class)) %>%
-  tabyl(gets_to_remission, gfr_class) -> tab_gfr_remission
+  rename(Remission = gets_to_remission, `GFR class` = gfr_class) %>%
+  mutate(Remission = ifelse(Remission==1, 'Yes','No')) %>%
+  rename(`Ever in remission` = Remission) %>%
+  tabyl(`Ever in remission`, `GFR class`) -> tab_gfr_remission
 
 tab_gfr_remission %>%
   adorn_percentages('col') %>%
@@ -570,9 +575,9 @@ tab_gfr_remission %>%
 
 #' A Fishers exact test gives a p-value of
 #' `r tab_gfr_remission %>% fisher.test() %>% broom::tidy() %>% pull(p.value)`.
-
-## Dialysis, transplant and ESRD
-
+#'
+#' ## Dialysis, transplant and ESRD
+#'
 #' As we saw earlier, we don't have sufficient information on these outcomes
 #' for this subset of subject who are LN-positive to assess how
 #' GFR stage at diagnosis is associated with them.
@@ -676,6 +681,7 @@ tab_rit_gender %>%
 # prin4 is the dataset we will use, looking at the time of diagnosis,
 # and then linking with Rituximab use
 
+opts <- options(knitr.kable.NA='')
 rtx_gfr <- prin4 %>% group_by(subject_id) %>%
   filter(event_index == min(event_index)) %>%
   ungroup() %>%
@@ -693,6 +699,8 @@ rtx_gfr %>%
         p-value based on Wilcoxon test',
         digits=2) %>%
   kable_styling(full_width = F)
+
+options(opts)
 
 #+ rtx_gfr_plot, fig.width=4, fig.height=4
 ggplot(rtx_gfr, aes(x = Rituximab, y = eGFR))+geom_violin()+
