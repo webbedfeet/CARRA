@@ -28,6 +28,7 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE,
 #   select(-folderName) %>%
 #   clean_names()
 # saveRDS(all_subjects, here('data/rda/all_subjects.rds'), compress=T)
+all_subjects <- readRDS(here('data/rda/all_subjects.rds'))
 #'
 #+ data_date_version, echo=F
 # Documenting version of data we're using ---------------------------------
@@ -148,15 +149,28 @@ biopsy %>% count(time_to_pos_biopsy) %>% mutate(prob = 100*cumsum(n)/sum(n)) %>%
 #'
 #' Definition of LN classes:
 #'
-#' 1. Class V = WHO-5 or ISNRPS-5
 #' 1. Class III = WHO-3 or ISNRPS-3
 #' 1. Class IV = WHO-4 or ISNRPS-4
+#' 1. Class V = WHO-5 or ISNRPS-5
+#'
+#' Based on conversations (5/8/2020), we will create 3 mutually exclusive classes
+#' for LN for this analysis. These are
+#'
+#' 1. Class III/IV only
+#' 1. Class III/IV + V
+#' 1. Class V only
+#'
+
+# This has been modified in biopsy_classes.R and in now included in the
+# raw_biopsy dataset
+
 #'
 #' The definition of nephrotic syndrome is as follows:
 #'
 #' 1. The presence of nephrotic range proteinuria, which is a urine protein:creatinine ratio > 1mg/mg or if there is a 24 hour urine instead of a urine protein:creatinine ratio (different docs check it differently), it would be a 24 hour protein excretion greater than 3.5 g/24 hours.
 #' 2. Hypoalbuminemia (an albumin less than 3 g/dL)
 #' 3. On examination, documentation of edema
+#'
 #'
 #' ### Poor availability of data
 #' To evaluate this principle we need information on protein:creatinine ratios in urine, albumin
@@ -169,7 +183,7 @@ biopsy %>% count(time_to_pos_biopsy) %>% mutate(prob = 100*cumsum(n)/sum(n)) %>%
 #'
 #' These two issues preclude us from looking at nephrotic syndrome as an outcome for any
 #' analysis.
-
+#'
 #' ## Principle 4: Short term renal outcomes are worse in blacks
 # Principle 4 -------------------------------------------------------------
 #' Based on conversations, we will consider only LN patients and take their
@@ -177,16 +191,7 @@ biopsy %>% count(time_to_pos_biopsy) %>% mutate(prob = 100*cumsum(n)/sum(n)) %>%
 #' analysis. We will look at race, baseline GFR level, as well as LN classes,
 #' as stratifying variables
 #'
-make_visit_index <- function(d){
-  d %>% filter(!(visit %in% c('Common Forms','Medications', 'Event'))) %>%
-    mutate(visit=fct_relevel(visit, 'Baseline','6 month')) %>%
-    mutate(visit_index = event_index) %>%
-    mutate(visit_index = ifelse(visit == 'Unsch' & !is.na(event_index),
-                                event_index - 0.5, event_index)) %>%
-    mutate(visit_index = ifelse(!is.na(visit) & is.na(visit_index),
-                                as.numeric(visit)-0.5, visit_index))
-}
-
+#+ outcomes
 all_subjects <- readRDS(here('data/rda/all_subjects.rds'))
 demographic <- readRDS(here('data/rda/demographic.rds')) # computed below
 short_outcomes <- readRDS(here('data/rda/short_outcomes.rds')) %>%
@@ -245,11 +250,14 @@ prin4 <- prin4 %>%
   fill(first_ln, .direction='down') %>%
   ungroup() %>%
   filter(!is.na(first_ln))
+
 #' There are a total of `r length(unique(raw_biopsy$subject_id[raw_biopsy$LN==1]))` LN
 #' positive subjects in this study. Among these individuals, many are missing
 #' information on outcomes, or multiple visits post-diagnosis of LN. For example,
 #' if we look at availability of data by visit among people who are LN+, for
 #' the visits on or after their LN diagnosis, we get this picture:
+#'
+#+ outcome_missing
 prin4 %>%
   mutate(visit = as.factor(visit),
          visit = fct_relevel(visit, 'Baseline','6 month')) %>%
@@ -271,6 +279,8 @@ prin4 %>% count(subject_id) %>% tabyl(n) %>%
   kable_styling(full_width = F)
 
 #' ## GFR changes
+#'
+#+ gfr_change_black
 
 gfr_id <- prin4 %>%
   filter(!is.na(gfr_class)) %>%
@@ -300,12 +310,13 @@ kable(tabs$Black, caption = 'Change in GFR stage among blacks') %>%
 kable(tabs$`Non-black`, caption = 'Change in GFR stage among non-blacks') %>%
   kable_styling()
 
+#+ permutation, cache=TRUE
 ## Permutation test
 
 worse = rep(0, 1000)
 set.seed(1034)
 for(i in 1:5000){
-  print(i)
+  # print(i)
   worse[i] <- tmp %>%
     mutate(bl = sample(black)) %>%
     filter(bl=='Black') %>%
@@ -355,14 +366,29 @@ prin4 %>% filter(subject_id %in% gfr_id) %>%
 #'
 #'     - Creatinine within normal range
 #'     - urine red blood cells\<10/high powered field
+
 tb <- prin4 %>% group_by(subject_id) %>%
   filter(event_index==min(event_index)) %>% tabyl(remission)
+
 #' At diagnosis, this can be assessed for `r sum(tb$n[1:2])` patients, which is
 #' `r 100*sum(tb$percent[1:2])`% of all
 #' patients. Of those for whom remission state is observed,
 #' `r tb$n[2]` or
 #' `r 100*tb$valid_percent[2]`%
-#' entered the study in the remission state.
+#' entered the study in the remission state. Separating between blacks and non-blacks:
+
+prin4 %>% mutate(black = ifelse(black==1, 'Yes','No')) %>%
+  group_by(subject_id) %>%
+  filter(event_index==min(event_index)) %>%
+  ungroup() %>%
+  tabyl(black, remission) %>%
+  adorn_percentages('col') %>%
+  adorn_pct_formatting() %>%
+  adorn_ns() %>%
+  adorn_title() %>%
+  kable() %>%
+  kable_styling()
+
 #'
 #' We will now just look at individuals who were not in remission state at diagnosis
 
@@ -371,76 +397,143 @@ remission_id <- prin4 %>%
   filter(event_index==min(event_index), !is.na(remission), remission=='No') %>%
   ungroup() %>%
   pull(subject_id)
-#' Of these individuals, `r 100*(prin4 %>% filter(subject_id %in% remission_id) %>% count(subject_id) %>% summarize(n>1) %>% pull())`%
-#' have at least one subsequent visit.
+
+#' Of these individuals, `r 100*(prin4 %>% filter(subject_id %in% remission_id) %>% count(subject_id) %>% summarize(mean(n>1)) %>% pull())`%
+#' have at least one subsequent visit. We'll investigate these subjects for subsequent remission. The following
+#' table shows the frequency distribution of individuals who subsequently got to remission state at some point for blacks and
+#' non-blacks.
 #'
-prin4 %>% filter(subject_id %in% remission_id, ) %>%
 
-prin4 %>% filter(visit == 'Baseline') %>%
-  tabyl(remission)
-
-## GFR
-
-d <- prin4 %>%
-  filter(!is.na(gfr_class)) %>%
+remission_id_mult <- prin4 %>% filter(subject_id %in% remission_id) %>%
+  count(subject_id) %>% filter(n>1) %>% pull(subject_id)
+tbl_black_remission <- prin4 %>% filter(subject_id %in% remission_id_mult) %>%
+  mutate(black = ifelse(black==1, 'Yes','No')) %>%
   group_by(subject_id) %>%
-  filter(event_index == min(event_index) | event_index==max(event_index)) %>%
+  mutate(remission = ifelse(any(remission=='Yes', na.rm=T), 'Yes','No')) %>%
   ungroup() %>%
-  select(subject_id, event_index, gfr_class) %>%
+  select(subject_id, black, remission) %>%
   distinct() %>%
-  mutate(event_index = ifelse(event_index == 1, 'first','last'))
-d %>% count(subject_id) %>% filter(n > 1) %>%
-  left_join(d) %>% distinct() %>%
-  spread(event_index, gfr_class) %>%
-  filter(!is.na(last)) %>%
-  tabyl(first, last) %>%
-  adorn_percentages('all') %>%
-  adorn_pct_formatting() %>%
-  adorn_title('combined') %>%
-  kable(caption = 'Percentage by GFR stage transition') %>%
-  kable_styling()
-
-d %>% count(subject_id) %>% filter(n > 1) %>% left_join(d) %>% distinct() %>%
-  spread(event_index, gfr_class) %>%
-  filter(!is.na(last)) %>%
-  tabyl(first, last) %>%
-  adorn_percentages('row') %>%
-  adorn_pct_formatting() %>% adorn_ns() %>%
-  adorn_title('combined') %>%
-  kable(caption = 'Percentage by GFR stage transition') %>%
-  kable_styling()
-
-## Remission
-
-prin4 %>% filter(visit == 'Baseline') %>%
-  tabyl(remission) %>%
-  adorn_pct_formatting() %>%
-  kable(caption = '"Normal" status at baseline') %>%
-  kable_styling()
-## Omit subjects who are normal at baseline
-prin4 %>%
-  filter(!is.na(remission)) %>%
-  filter(subject_id %in% (prin4 %>% filter(visit == 'Baseline', remission=='No') %>%
-                            pull(subject_id))) %>%
-  tabyl(remission, black, visit) %>% adorn_percentages('col') %>%
+  tabyl(black, remission)
+tbl_black_remission %>%
+  adorn_percentages('col') %>%
   adorn_pct_formatting() %>%
   adorn_ns() %>%
-  bind_rows(.id = 'visit') %>%
-  mutate(visit = fct_relevel(visit, 'Baseline','6 month','12 month','18 month')) %>%
-  arrange(visit) %>%
-  filter(visit != 'Baseline') %>%
-  rename(`Non-black` = `0`, Black = `1`) %>%
-  kable(caption = 'Proportion getting to remission by time and race') %>%
+  adorn_title() %>%
+  kable() %>%
   kable_styling()
+
+#' This is not statistically significant using Fisher's test
+#'
+#' ## Dialysis, transplant and ESRD
+#'
+#' All these outcomes are sparse in this data set, even on restricting to
+#' subjects who have been diagnosed with lupus nephritis
+
+prin4$dialysis %>%
+  tabyl() %>%
+  mutate_at(vars(contains('percent')), ~100*.x) %>%
+  kable(caption = 'Frequency distribution for dialysis')
+
+prin4$transplant %>%
+  tabyl() %>%
+  mutate_at(vars(contains('percent')), ~100*.x) %>%
+  kable(caption = 'Frequency distribution for transplant')
+
+prin4$esrd %>%
+  tabyl() %>%
+  mutate_at(vars(contains('percent')), ~100*.x) %>%
+  kable(caption = 'Frequency distribution for ESRD')
+
+
 
 
 #' ## Principle 5: Short term renal outcomes are worse in patients who present with GFR < 60mL/min/1.73 m2 and/or nephrotic-range proteinuria (> 1 protein/creatinine ratio)
 # Principle 5 -------------------------------------------------------------
 
+# We start with prin4, which only contains subjects with LN and starts
+# their time at time of diagnosis
+
+prin4 %>% group_by(subject_id) %>%
+  filter(event_index ==  min(event_index)) %>% # Just look at visit where LN+ diagnosed
+  ungroup() %>%
+  tabyl(gfr_class) %>%
+  mutate_at(vars(contains('percent')), ~100*.x) %>%
+  kable(caption = 'Distribution of GFR class at time of LN diagnosis') %>%
+  kable_styling()
+
+#' We see that 93% of the available GFR classes are in Stage 1, and
+#' only 7% are worse than Stage 1.
+
+#' ## GFR changes
+#'
+#+ gfr_change
+
+gfr_id <- prin4 %>%
+  filter(!is.na(gfr_class)) %>%
+  count(subject_id) %>%
+  filter(n>1) %>%
+  pull(subject_id)
+
+prin4 %>%
+  filter(subject_id %in% gfr_id) %>%
+  filter(!is.na(gfr_class)) %>%
+  arrange(subject_id,event_index) %>%
+  group_by(subject_id) %>%
+  mutate(first_visit = visit[event_index == min(event_index)],
+         last_visit = visit[event_index==max(event_index)],
+         egfr_visit = ifelse(event_index == min(event_index), 'First','Last'),
+         black = ifelse(black==1, 'Black','Non-black')) %>%
+  filter(event_index==min(event_index)|event_index==max(event_index)) %>%
+  ungroup() %>%
+  select(subject_id, black, first_visit, last_visit,
+         egfr_visit, gfr_class) %>%
+  spread(egfr_visit, gfr_class) -> tmp
+
+tabyl(dat=tmp, First, Last) %>% adorn_percentages('row') %>%
+  adorn_pct_formatting() %>%
+  adorn_ns() %>%
+  adorn_title() %>%
+  kable(caption = 'Changes in GFR class between diagnosis time/baseline and last visit') %>%
+  kable_styling()
+
+
+#' So, no one starting in Stage 2 or 3 gets worse, while 4% of people
+#' starting in Stage 1 do get worse.
+
+#' ## Remission
+
+prin4 %>% filter(subject_id %in% remission_id_mult) %>%
+  group_by(subject_id) %>%
+  mutate(gets_to_remission = ifelse(any(remission=='Yes', na.rm=T),1,0)) %>%
+  filter(event_index == min(event_index)) %>%
+  ungroup() %>%
+  select(subject_id, event_index, gfr_class, gets_to_remission) %>%
+  filter(!is.na(gfr_class)) %>%
+  tabyl(gets_to_remission, gfr_class) -> tab_gfr_remission
+
+tab_gfr_remission %>%
+  adorn_percentages('col') %>%
+  adorn_pct_formatting() %>%
+  adorn_ns() %>%
+  adorn_title() %>%
+  kable(caption = 'Chance of getting to remission by GFR class at LN diagnosis') %>%
+  kable_styling()
+
+#' A Fishers exact test gives a p-value of
+#' `r tab_gfr_remission %>% fisher.test() %>% broom::tidy() %>% pull(p.value)`.
+
+## Dialysis, transplant and ESRD
+
+#' As we saw earlier, we don't have sufficient information on these outcomes
+#' for this subset of subject who are LN-positive to assess how
+#' GFR stage at diagnosis is associated with them.
+#'
 #' ## Principle 6: Rituximab has been used as a steroid-sparing agent for induction in proliferative LN (LN vs no-LN, 3-4 vs 5)
 #'
 #' Rituximab use: IMMMED = 30
 #' MEDCATON = 30
+#'
+#+ rtx
 # Principle 6 -------------------------------------------------------------
 
 raw_biopsy <- readRDS(here('data/rda/biopsy_classes.rds'))
@@ -449,24 +542,27 @@ ritux <- all_rows %>% filter(conceptValue=='Rituximab (Rituxan)') %>%
   clean_names() %>%
   select(subject_id, ritux = concept_value) %>%
   distinct()
-tab_rtx_ln <- all_subjects %>% left_join(raw_biopsy) %>% left_join(ritux) %>%
-  filter(!is.na(LN)) %>%
+LN_data <- raw_biopsy %>% group_by(subject_id) %>%
+  summarize(LN = ifelse(any(LN==1, na.rm=T),1,0)) %>%
+  ungroup()
+tab_rtx_ln <- LN_data %>% left_join(ritux) %>%
   mutate(Rituximab = ifelse(is.na(ritux), 'No','Yes'),
          LN = ifelse(LN==1, 'Pos','Neg')) %>%
   tabyl(Rituximab, LN)
-
-
 tab_rtx_ln %>%
   adorn_percentages('col') %>%
-  adorn_pct_formatting(digits=2) %>%
+  adorn_totals('row') %>%
+  adorn_pct_formatting() %>%
   adorn_ns() %>%
-  adorn_title('combined') %>%
+  adorn_title() %>%
   knitr::kable(caption = 'Rituximab use between LN and non-LN subjects') %>%
   kable_styling()
+
 #'
 #' This is statistically significant, with the $\chi^2$ test p-value being
 #' `r pval_scientific(chisq.test(tab_rtx_ln)$p.value)`.
 #'
+#+ rtx_ln
 tbl_rit_class <- all_subjects %>%
   left_join(raw_biopsy) %>%
   filter(!is.na(LN)) %>%
@@ -489,10 +585,10 @@ tbl_rit_class %>%
   kable_styling()
 
 #' This is not statistically significant (p-value = `r chisq.test(tbl_rit_class)$p.value`)
-
-
 #'
 #' ### Is there differences in age/gender for people getting Rituximab
+#'
+#+ rtx_age
 demographic <- readRDS(here('data/rda/demographic.rds'))
 bl <- demographic %>% left_join(slicc_info) %>%
   rename(ritux = slicc00) %>%
@@ -506,6 +602,8 @@ bl %>% group_by(ritux) %>%
 
 #' This is not significant
 #' (Wilcoxon test p-value = `r format(wilcox.test(rheumage~ritux, data=bl)$p.value, digits=2)`)
+#'
+#+ rtx_gender
 
 tab_rit_gender <- bl %>%
   rename(Sex=sex, Rituximab = ritux) %>%
