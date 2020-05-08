@@ -21,13 +21,13 @@ source(here('lib/R/pval_scientific.R'))
 
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE,
                       cache = F)
-all_subjects <- vroom(here('data/raw/all_rows_data_2020-01-31_1545.csv'),
-                      col_select = c(subjectId, visit = folderName, eventIndex)) %>%
-  distinct() %>%
-  mutate(folderName = fct_relevel(visit, 'Baseline','6 month','12 month','18 month','24 month')) %>%
-  select(-folderName) %>%
-  clean_names()
-saveRDS(all_subjects, here('data/rda/all_subjects.rds'), compress=T)
+# all_subjects <- vroom(here('data/raw/all_rows_data_2020-01-31_1545.csv'),
+#                       col_select = c(subjectId, visit = folderName, eventIndex)) %>%
+#   distinct() %>%
+#   mutate(folderName = fct_relevel(visit, 'Baseline','6 month','12 month','18 month','24 month')) %>%
+#   select(-folderName) %>%
+#   clean_names()
+# saveRDS(all_subjects, here('data/rda/all_subjects.rds'), compress=T)
 #'
 #+ data_date_version, echo=F
 # Documenting version of data we're using ---------------------------------
@@ -172,6 +172,11 @@ biopsy %>% count(time_to_pos_biopsy) %>% mutate(prob = 100*cumsum(n)/sum(n)) %>%
 
 #' ## Principle 4: Short term renal outcomes are worse in blacks
 # Principle 4 -------------------------------------------------------------
+#' Based on conversations, we will consider only LN patients and take their
+#' first visit with confirmed LN as the baseline time for the GFR change
+#' analysis. We will look at race, baseline GFR level, as well as LN classes,
+#' as stratifying variables
+#'
 make_visit_index <- function(d){
   d %>% filter(!(visit %in% c('Common Forms','Medications', 'Event'))) %>%
     mutate(visit=fct_relevel(visit, 'Baseline','6 month')) %>%
@@ -184,39 +189,195 @@ make_visit_index <- function(d){
 
 all_subjects <- readRDS(here('data/rda/all_subjects.rds'))
 demographic <- readRDS(here('data/rda/demographic.rds')) # computed below
-short_outcomes <- readRDS(here('data/rda/short_outcomes.rds'))
+short_outcomes <- readRDS(here('data/rda/short_outcomes.rds')) %>%
+  mutate(visit = as.character(visit))
+visits <- vroom(here('data/raw/visit.list_data_2020-01-31_1545.csv')) %>%
+  clean_names(case='snake') %>%
+  select(subject_id, event_index, visit = event_type, visit_date)
+
 raw_biopsy <- readRDS(here('data/rda/biopsy_classes.rds')) %>%
-  select(subject_id:event_index, starts_with("LN"))
+  select(subject_id:event_index, starts_with('biop'), starts_with("LN")) %>%
+  filter(LN==1) %>%
+  nest(-subject_id)
+filter_fn <- function(d){
+  if(nrow(d)>1){
+    d <- d %>% filter(event_index == min(event_index, na.rm=T))
+  }
+  d <- d %>% select(-starts_with('biop')) %>%
+    group_by(visit) %>%
+    summarize_at(vars(starts_with('LN')), max, na.rm=T) %>%
+    distinct() %>%
+    ungroup()
+  return(d)
+}
+raw_biopsy <- raw_biopsy %>%
+  mutate(newdata = map(data, filter_fn)) %>%
+  select(-data) %>%
+  unnest(cols = c(newdata))
+
+## Fix event_index for subject 139, 6 month visit
+all_subjects$event_index[all_subjects$subject_id==139 &
+                           all_subjects$visit=='6 month'] <- 2.5
+all_subjects$event_index[all_subjects$subject_id==225 &
+                           all_subjects$visit=='Unsch'] <- 2
+
+
 prin4 <- all_subjects %>%
   left_join(demographic %>%
               select(white:othrace, subject_id)) %>%
-  left_join(short_outcomes) %>%
+  left_join(short_outcomes %>% select(-event_index)) %>%
   left_join(raw_biopsy) %>%
-  distinct() %>%
-  make_visit_index()
+  filter(str_detect(visit, regex('Baseline|month|Unsch'))) %>%
+  distinct()
+
+prin4 <- prin4 %>%
+  mutate(first_ln = ifelse(LN==1, 1, 0)) %>%
+  filter_at(vars(creatval:first_ln), any_vars(!is.na(.))) %>%
+  filter(!is.na(event_index))
+
+## Only LN patients
+ln_ids <- prin4 %>% filter(LN==1) %>% pull(subject_id) %>% unique()
+prin4 <- prin4 %>%
+  filter(subject_id %in% ln_ids) %>%
+  mutate(first_ln = ifelse(first_ln==0, NA, first_ln)) %>%
+  group_by(subject_id) %>%
+  arrange(event_index) %>%
+  fill(first_ln, .direction='down') %>%
+  ungroup() %>%
+  filter(!is.na(first_ln))
+#' There are a total of `r length(unique(raw_biopsy$subject_id[raw_biopsy$LN==1]))` LN
+#' positive subjects in this study. Among these individuals, many are missing
+#' information on outcomes, or multiple visits post-diagnosis of LN. For example,
+#' if we look at availability of data by visit among people who are LN+, for
+#' the visits on or after their LN diagnosis, we get this picture:
+prin4 %>%
+  mutate(visit = as.factor(visit),
+         visit = fct_relevel(visit, 'Baseline','6 month')) %>%
+  group_by(visit) %>%
+  summarize_at(vars(creat_status:remission), naniar::pct_miss) %>%
+  ungroup() %>%
+  kable(digits = 1, caption = 'Percent missing data by outcome and visit') %>%
+  kable_styling()
+
+#' Also, 20 percent of LN+ subjects had only 1 available visit, so any change
+#' is not observable
+prin4 %>% count(subject_id) %>% tabyl(n) %>%
+  mutate(n = as.character(n)) %>%
+  adorn_totals() %>%
+  mutate(percent = 100*percent) %>%
+  kable(caption = "Frequency of the number of visits per subject post LN diagnosis",
+        col.names = c('Number of visits','Frequency','Percent'),
+        digits=2) %>%
+  kable_styling(full_width = F)
+
+#' ## GFR changes
+
+gfr_id <- prin4 %>%
+  filter(!is.na(gfr_class)) %>%
+  count(subject_id) %>%
+  filter(n>1) %>%
+  pull(subject_id)
+
+prin4 %>%
+  filter(subject_id %in% gfr_id) %>%
+  filter(!is.na(gfr_class)) %>%
+  arrange(subject_id,event_index) %>%
+  group_by(subject_id) %>%
+  mutate(first_visit = visit[event_index == min(event_index)],
+         last_visit = visit[event_index==max(event_index)],
+         egfr_visit = ifelse(event_index == min(event_index), 'First','Last'),
+         black = ifelse(black==1, 'Black','Non-black')) %>%
+  filter(event_index==min(event_index)|event_index==max(event_index)) %>%
+  ungroup() %>%
+  select(subject_id, black, first_visit, last_visit,
+         egfr_visit, gfr_class) %>%
+  spread(egfr_visit, gfr_class) -> tmp
+
+tabs <- tabyl(dat=tmp, First, Last, black) %>% adorn_totals('col') %>% adorn_percentages('row') %>% adorn_pct_formatting() %>% adorn_ns() %>% adorn_title()
+
+kable(tabs$Black, caption = 'Change in GFR stage among blacks') %>%
+  kable_styling()
+kable(tabs$`Non-black`, caption = 'Change in GFR stage among non-blacks') %>%
+  kable_styling()
+
+## Permutation test
+
+worse = rep(0, 1000)
+set.seed(1034)
+for(i in 1:5000){
+  print(i)
+  worse[i] <- tmp %>%
+    mutate(bl = sample(black)) %>%
+    filter(bl=='Black') %>%
+    count(First, Last) %>%
+    filter(First=='Stage 1', Last != 'Stage 1') %>%
+    pull(n) %>%
+    sum()
+}
+
+#' We can perform a permutation test to see if blacks do worse than non-blacks
+#' insofar as the chance of worsening GFR state if the initial GFR state was Stage 1
+#' at time of LN diagnosis. Using 5000 permutations of black status, we find
+#' that the permutation test gives a p-value of `r round(mean(worse >= 4), 2)`,
+#' thus showing some evidence that blacks tend to worsen at a higher rate than
+#' non-blacks.
+#'
+#' We can also look at the actual eGFR values to see if there is a difference
+#' in eGFR overall between the time of LN diagnosis and when they are last seen
+#'
+
+prin4 %>% filter(subject_id %in% gfr_id) %>%
+  filter(!is.na(eGFR)) %>%
+  arrange(subject_id,event_index) %>%
+  group_by(subject_id) %>%
+  mutate(first_visit = visit[event_index == min(event_index)],
+         last_visit = visit[event_index==max(event_index)],
+         egfr_visit = ifelse(event_index == min(event_index), 'First','Last'),
+         black = ifelse(black==1, 'Black','Non-black')) %>%
+  filter(event_index==min(event_index)|event_index==max(event_index)) %>%
+  ungroup() %>%
+  select(subject_id, black, first_visit, last_visit, egfr_visit, eGFR) %>%
+  spread(egfr_visit, eGFR) %>%
+  mutate(egfr_change = Last - First) %>%
+  tableone::CreateTableOne(vars = c('egfr_change'), strata = c('black')) %>%
+  print(nonnormal = c('egfr_change')) %>%
+  tableone::kableone() %>%
+  kable_styling()
+
+#' This shows no evidence overall that eGFR changes from time of diagnosis.
+#' This is consistent with the previous result which shows that the vast
+#' majority of LN patients stay in the same eGFR stage after LN diagnosis.
+#'
 
 
-#' Based on conversations, we will consider only LN patients and take their first
-#' visit with confirmed LN as the baseline time for the GFR change analysis. We will look at
-#' race, baseline GFR level, as well as LN classes, as stratifying variables
+#' ## Remission
+#' We are defining remission by the following 2 criteria:
 #'
-prin4$event_index[prin4$subject_id==139 & prin4$visit=='6 month'] <- 2.5
-baseline_time <- prin4 %>%
-  filter(LN == 1, !is.na(LN)) %>%
-  group_by(subject_id) %>%
-  filter(event_index == min(event_index)) %>%
-  ungroup() %>%
-  select(subject_id, visit, baseline_time = event_index) %>%
-  distinct()
-#' There are `r nrow(baseline_time)` individuals with
-#' confirmed LN.
+#'     - Creatinine within normal range
+#'     - urine red blood cells\<10/high powered field
+tb <- prin4 %>% group_by(subject_id) %>%
+  filter(event_index==min(event_index)) %>% tabyl(remission)
+#' At diagnosis, this can be assessed for `r sum(tb$n[1:2])` patients, which is
+#' `r 100*sum(tb$percent[1:2])`% of all
+#' patients. Of those for whom remission state is observed,
+#' `r tb$n[2]` or
+#' `r 100*tb$valid_percent[2]`%
+#' entered the study in the remission state.
 #'
-prin4 <- prin4 %>% left_join(baseline_time) %>%
-  filter(!is.na(baseline_time), !is.na(LN)) %>%
+#' We will now just look at individuals who were not in remission state at diagnosis
+
+remission_id <- prin4 %>%
   group_by(subject_id) %>%
-  filter(event_index >= baseline_time) %>%
+  filter(event_index==min(event_index), !is.na(remission), remission=='No') %>%
   ungroup() %>%
-  distinct()
+  pull(subject_id)
+#' Of these individuals, `r 100*(prin4 %>% filter(subject_id %in% remission_id) %>% count(subject_id) %>% summarize(n>1) %>% pull())`%
+#' have at least one subsequent visit.
+#'
+prin4 %>% filter(subject_id %in% remission_id, ) %>%
+
+prin4 %>% filter(visit == 'Baseline') %>%
+  tabyl(remission)
 
 ## GFR
 
@@ -332,12 +493,7 @@ tbl_rit_class %>%
 
 #'
 #' ### Is there differences in age/gender for people getting Rituximab
-demographic <- vroom(here('data/raw/dem_data_2020-01-31_1545.csv')) %>%
-  clean_names() %>%
-  select(subject_id, rheumage, sex, dxdage,
-         white, black, asian, amerind, hispanic,
-         mideast, noanswer, nathwn, othrace, residenc)
-saveRDS(demographic, here('data/rda/demographic.rds'), compress=T)
+demographic <- readRDS(here('data/rda/demographic.rds'))
 bl <- demographic %>% left_join(slicc_info) %>%
   rename(ritux = slicc00) %>%
   mutate(ritux = ifelse(ritux==1, 'Yes','No'))
