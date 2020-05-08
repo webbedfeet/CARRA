@@ -399,7 +399,7 @@ prin4 %>% filter(subject_id %in% gfr_id) %>%
   spread(egfr_visit, eGFR) %>%
   mutate(egfr_change = Last - First) %>%
   tableone::CreateTableOne(vars = c('egfr_change'), strata = c('black')) %>%
-  print(nonnormal = c('egfr_change')) %>%
+  print(nonnormal = c('egfr_change'), printToggle=F) %>%
   tableone::kableone() %>%
   kable_styling()
 
@@ -407,13 +407,11 @@ prin4 %>% filter(subject_id %in% gfr_id) %>%
 #' This is consistent with the previous result which shows that the vast
 #' majority of LN patients stay in the same eGFR stage after LN diagnosis.
 #'
-
-
 #' ## Remission
 #' We are defining remission by the following 2 criteria:
 #'
-#'     - Creatinine within normal range
-#'     - urine red blood cells\<10/high powered field
+#' - Creatinine within normal range
+#' - urine red blood cells\<10/high powered field
 
 tb <- prin4 %>% group_by(subject_id) %>%
   filter(event_index==min(event_index)) %>% tabyl(remission)
