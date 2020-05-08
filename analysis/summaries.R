@@ -5,7 +5,10 @@
 #' output:
 #'   html_document:
 #'     toc: true
-#'     toc_float: true
+#'     toc_depth: 3
+#'     toc_float:
+#'       collapsed: true
+#'       smooth_scroll: false
 #'     theme: sandstone
 #'     highlight: zenburn
 #'     code_folding: hide
@@ -326,7 +329,7 @@ prin4 %>% count(subject_id) %>% tabyl(n) %>%
         digits=2) %>%
   kable_styling(full_width = F)
 
-#' ## GFR changes
+#' ### GFR changes
 #'
 #+ gfr_change_black
 
@@ -407,7 +410,7 @@ prin4 %>% filter(subject_id %in% gfr_id) %>%
 #' This is consistent with the previous result which shows that the vast
 #' majority of LN patients stay in the same eGFR stage after LN diagnosis.
 #'
-#' ## Remission
+#' ### Remission
 #' We are defining remission by the following 2 criteria:
 #'
 #' - Creatinine within normal range
@@ -470,7 +473,7 @@ tbl_black_remission %>%
 
 #' This is not statistically significant using Fisher's test
 #'
-#' ## Dialysis, transplant and ESRD
+#' ### Dialysis, transplant and ESRD
 #'
 #' All these outcomes are sparse in this data set, even on restricting to
 #' subjects who have been diagnosed with lupus nephritis
@@ -507,13 +510,14 @@ prin4 %>% group_by(subject_id) %>%
   ungroup() %>%
   tabyl(gfr_class) %>%
   mutate_at(vars(contains('percent')), ~100*.x) %>%
-  kable(caption = 'Distribution of GFR class at time of LN diagnosis') %>%
+  kable(caption = 'Distribution of GFR class at time of LN diagnosis',
+        digits=2) %>%
   kable_styling()
 
 #' We see that 93% of the available GFR classes are in Stage 1, and
 #' only 7% are worse than Stage 1.
-
-#' ## GFR changes
+#'
+#' ### GFR changes
 #'
 #+ gfr_change
 
@@ -548,8 +552,8 @@ tabyl(dat=tmp, First, Last) %>% adorn_percentages('row') %>%
 
 #' So, no one starting in Stage 2 or 3 gets worse, while 4% of people
 #' starting in Stage 1 do get worse.
-
-#' ## Remission
+#'
+#' ### Remission
 
 prin4 %>% filter(subject_id %in% remission_id_mult) %>%
   group_by(subject_id) %>%
@@ -574,7 +578,7 @@ tab_gfr_remission %>%
 #' A Fishers exact test gives a p-value of
 #' `r tab_gfr_remission %>% fisher.test() %>% broom::tidy() %>% pull(p.value)`.
 #'
-#' ## Dialysis, transplant and ESRD
+#' ### Dialysis, transplant and ESRD
 #'
 #' As we saw earlier, we don't have sufficient information on these outcomes
 #' for this subset of subject who are LN-positive to assess how
@@ -585,6 +589,7 @@ tab_gfr_remission %>%
 #' Rituximab use: IMMMED = 30
 #' MEDCATON = 30
 #'
+#' ### Rituximab use by nephritis class
 #+ rtx
 # Principle 6 -------------------------------------------------------------
 
