@@ -6,8 +6,8 @@
 #'   html_document:
 #'     toc: true
 #'     toc_float: true
-#'     theme: cerulean
-#'     highlight: espresso
+#'     theme: sandstone
+#'     highlight: zenburn
 #'     code_folding: hide
 #' ---
 #'
@@ -21,6 +21,7 @@ source(here('lib/R/pval_scientific.R'))
 
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE,
                       cache = F)
+opts <- options(knitr.kable.NA='')
 # all_subjects <- vroom(here('data/raw/all_rows_data_2020-01-31_1545.csv'),
 #                       col_select = c(subjectId, visit = folderName, eventIndex)) %>%
 #   distinct() %>%
@@ -173,6 +174,7 @@ biopsy %>% count(time_to_pos_biopsy) %>% mutate(prob = 100*cumsum(n)/sum(n)) %>%
 #'
 #'
 #' ### Poor availability of data
+#'
 #' To evaluate this principle we need information on protein:creatinine ratios in urine, albumin
 #' levels and documentation of edema. First of all, it does not appear that **albumin was collected**,
 #' at least it is not available in the CARRA database.
@@ -183,6 +185,53 @@ biopsy %>% count(time_to_pos_biopsy) %>% mutate(prob = 100*cumsum(n)/sum(n)) %>%
 #'
 #' These two issues preclude us from looking at nephrotic syndrome as an outcome for any
 #' analysis.
+#'
+#' ### Frequency distribution of LN classes
+#'
+#' As a descriptive analysis, we present the frequency distribution
+#' of LN classes in this dataset
+#'
+#+ ln_classes
+
+raw_biopsy <- readRDS(here('data/rda/biopsy_classes.rds'))
+LN_classes <- raw_biopsy %>%
+  group_by(subject_id) %>%
+  summarise_at(vars(starts_with("LN")),
+               ~ifelse(any(. == 1), 1, 0)) %>%
+  ungroup()
+saveRDS(LN_classes, here('data/rda/LN_classes.rds'), compress=T)
+
+LN_classes %>% mutate(LN=ifelse(is.na(LN), 'No', 'Yes')) %>%
+  tabyl(LN) %>%
+  adorn_totals() %>%
+  adorn_pct_formatting() %>%
+  kable(caption = 'Lupus nephritis frequency') %>%
+  kable_styling()
+
+# There are edge cases where multiple biopsies have led to different
+# LN classes. I'm taking the "any" approach in that the person's final
+# class is based on all biopsies and any classes resulting from those
+# biopsies
+LN_classes <- LN_classes %>%
+  filter(!is.na(LN)) %>%
+  mutate(
+    LN34 = ifelse((LN3==1 | LN4==1) & (LN5==0), 1, 0),
+    LN345 = ifelse((LN3==1 & LN5==1) | (LN4==1 & LN5==1), 1, 0),
+    LN50 = ifelse(LN5==1 & LN3==0 & LN4==0, 1, 0)
+  )
+LN_classes %>%
+  select(LN34:LN50) %>%
+  rename(`III/IV` = LN34,
+         `III/IV + V` = LN345,
+         `V only` = LN50) %>%
+  pivot_longer(cols = everything(), names_to='LN Class', values_to = 'Indicator') %>%
+  filter(Indicator==1) %>%
+  tabyl(`LN Class`) %>%
+  adorn_totals() %>%
+  adorn_pct_formatting() %>%
+  kable(caption = 'Frequency distribution of LN classes') %>%
+  kable_styling()
+
 #'
 #' ## Principle 4: Short term renal outcomes are worse in blacks
 # Principle 4 -------------------------------------------------------------
@@ -536,18 +585,18 @@ tab_gfr_remission %>%
 #+ rtx
 # Principle 6 -------------------------------------------------------------
 
-raw_biopsy <- readRDS(here('data/rda/biopsy_classes.rds'))
+raw_biopsy <- readRDS(here('data/rda/biopsy_classes.rds')) # Updated for LN34+5 class
 all_rows <- vroom(here('data/raw/all_rows_data_2020-01-31_1545.csv'))
 ritux <- all_rows %>% filter(conceptValue=='Rituximab (Rituxan)') %>%
   clean_names() %>%
   select(subject_id, ritux = concept_value) %>%
   distinct()
-LN_data <- raw_biopsy %>% group_by(subject_id) %>%
-  summarize(LN = ifelse(any(LN==1, na.rm=T),1,0)) %>%
-  ungroup()
-tab_rtx_ln <- LN_data %>% left_join(ritux) %>%
+## LN_classes was created in Principle 3
+LN_classes <- readRDS(here('data/rda/LN_classes.rds'))
+tab_rtx_ln <- LN_classes  %>%
+  left_join(ritux) %>%
   mutate(Rituximab = ifelse(is.na(ritux), 'No','Yes'),
-         LN = ifelse(LN==1, 'Pos','Neg')) %>%
+         LN = ifelse(is.na(LN),'Neg', 'Pos')) %>%
   tabyl(Rituximab, LN)
 tab_rtx_ln %>%
   adorn_percentages('col') %>%
@@ -563,24 +612,24 @@ tab_rtx_ln %>%
 #' `r pval_scientific(chisq.test(tab_rtx_ln)$p.value)`.
 #'
 #+ rtx_ln
-tbl_rit_class <- all_subjects %>%
-  left_join(raw_biopsy) %>%
-  filter(!is.na(LN)) %>%
-  group_by(subject_id) %>%
-  summarize_at(vars(starts_with("LN")), ~ifelse(any(.==1,na.rm=T),1, 0)) %>%
+tbl_rit_class <- LN_classes %>%
   left_join(ritux) %>%
   mutate(Rituximab = ifelse(is.na(ritux), 'No', 'Yes')) %>%
-  mutate(LN34 = ifelse(LN3==1|LN4==1, 1, 0)) %>%
-  select(subject_id, LN34, LN5, Rituximab) %>%
-  gather(Class, value, LN34, LN5) %>%
+  filter(!is.na(LN)) %>%
+  select(subject_id, LN34:LN50, Rituximab) %>%
+  rename(`III/IV` = LN34,
+         `III/IV + V` = LN345,
+         `V only` = LN50) %>%
+  gather(Class, value, `III/IV`:`V only`) %>%
   filter(value==1) %>%
-  tabyl(Rituximab, Class)
+  tabyl(Class, Rituximab)
 
 tbl_rit_class %>%
   adorn_percentages('col') %>%
+  adorn_totals() %>%
   adorn_pct_formatting() %>%
-  adorn_title('combined') %>%
-  rename(`LN3/4` = LN34) %>%
+  adorn_ns() %>%
+  adorn_title() %>%
   kable(caption = 'Rituximab use by LN class') %>%
   kable_styling()
 
@@ -617,8 +666,99 @@ tab_rit_gender %>%
 
 #' This is not statistically significant
 #' ($\chi^2$ test p-value = `r format(chisq.test(tab_rit_gender)$p.value, digits=2)`)
+#'
+#' ### Differences in GFR by Rituximab use
+#'
+#' We will look at LN+ patients and their GFR at time of diagnosis or at
+#' baseline, and compare the GFR levels for Rituximab users and non-users
+#'
+#+ rtx_gfr
+# prin4 is the dataset we will use, looking at the time of diagnosis,
+# and then linking with Rituximab use
 
-#' # Session information
+rtx_gfr <- prin4 %>% group_by(subject_id) %>%
+  filter(event_index == min(event_index)) %>%
+  ungroup() %>%
+  left_join(ritux) %>%
+  mutate(Rituximab = ifelse(is.na(ritux),'No','Yes'))
+rtx_gfr %>%
+  group_by(Rituximab) %>%
+  summarize(N = sum(!is.na(eGFR)),
+            Mean = mean(eGFR, na.rm=T),
+            Median = median(eGFR, na.rm=T),
+            SD = sd(eGFR, na.rm=T),
+            IQR = IQR(eGFR, na.rm=T)) %>%
+  mutate(`P-value` = c(wilcox.test(eGFR~Rituximab, data=rtx_gfr)$p.value, NA)) %>%
+  kable(caption = 'GFR summaries by Rituximab use among LN patients;
+        p-value based on Wilcoxon test',
+        digits=2) %>%
+  kable_styling(full_width = F)
+
+#+ rtx_gfr_plot, fig.width=4, fig.height=4
+ggplot(rtx_gfr, aes(x = Rituximab, y = eGFR))+geom_violin()+
+  ggpubr::stat_compare_means(method='wilcox.test',
+                             label.x.npc = 0.8)+
+  scale_y_log10() +
+  theme_classic() +
+  labs(x = 'Rituximab use', y = 'eGFR')+
+  ggtitle('Distribution of eGFR by Rituximab use among LN patients')
+#'
+#'### Rituximab and concurrent medications
+#'
+#+ rtx_meds
+
+meds <- vroom(here('data/raw/meds_data_2020-01-31_1545.csv'),
+              col_select = c(subjectId, MEDCATON)) %>%
+  clean_names() %>%
+  mutate(medication = str_to_title(medcaton)) %>%
+  select(-medcaton)
+
+tab_rtx_med <- LN_classes %>% left_join(ritux) %>% left_join(meds) %>%
+  filter(!is.na(LN)) %>%
+  filter(medication != 'Rituximab (Rituxan)') %>%
+  mutate(ritux = ifelse(is.na(ritux), 'No','Yes')) %>%
+  tabyl(medication, ritux)
+o <- order(tab_rtx_med$Yes)
+
+out_rtx_med <- tab_rtx_med %>%
+  adorn_percentages('col') %>%
+  adorn_pct_formatting() %>%
+  adorn_ns() %>%
+  slice(rev(o))
+
+tab_rtx_med %>%
+  adorn_percentages('col') %>%
+  adorn_pct_formatting() %>%
+  adorn_ns() %>%
+  slice(rev(o)) %>%
+  slice(1:10) %>%
+  kable(caption = 'Top 10 drugs among RTX users and
+        corresponding proportions among non-RTX patients') %>%
+  kable_styling()
+
+out_rtx_med_diff <- tab_rtx_med %>%
+  adorn_percentages('col') %>%
+  mutate(pct_diff = Yes - No) %>%
+  arrange(-abs(pct_diff)) %>%
+  adorn_pct_formatting() %>%
+  rename(Difference = pct_diff)
+
+tab_rtx_med %>%
+  adorn_percentages('col') %>%
+  mutate(pct_diff = Yes - No) %>%
+  arrange(-abs(pct_diff)) %>%
+  adorn_pct_formatting() %>%
+  rename(Difference = pct_diff) %>%
+  head(10) %>%
+  kable(caption = 'Top 10 drugs in difference of usage between RTX and non-RTX') %>%
+  kable_styling()
+
+openxlsx::write.xlsx(list('Medications' = out_rtx_med,
+                          'Differences' = out_rtx_med_diff),
+                    file = here('data/raw/rtx_meds.xlsx'))
+#'
+#'
+#' ## Session information
 #'
 #' This analysis was done using `r R.version$version.string` and the following packages
 #+ packages, results = 'asis', echo = FALSE
