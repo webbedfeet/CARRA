@@ -2482,9 +2482,8 @@ Total
 </tr>
 </tbody>
 </table>
-</div>
-<div id="gfr-changes" class="section level2">
-<h2>GFR changes</h2>
+<div id="gfr-changes" class="section level3">
+<h3>GFR changes</h3>
 <div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1"></a>gfr_id &lt;-<span class="st"> </span>prin4 <span class="op">%&gt;%</span></span>
 <span id="cb13-2"><a href="#cb13-2"></a><span class="st">  </span><span class="kw">filter</span>(<span class="op">!</span><span class="kw">is.na</span>(gfr_class)) <span class="op">%&gt;%</span></span>
 <span id="cb13-3"><a href="#cb13-3"></a><span class="st">  </span><span class="kw">count</span>(subject_id) <span class="op">%&gt;%</span></span>
@@ -2790,8 +2789,8 @@ nonnorm
 </table>
 <p>This shows no evidence overall that eGFR changes from time of diagnosis. This is consistent with the previous result which shows that the vast majority of LN patients stay in the same eGFR stage after LN diagnosis.</p>
 </div>
-<div id="remission" class="section level2">
-<h2>Remission</h2>
+<div id="remission" class="section level3">
+<h3>Remission</h3>
 <p>We are defining remission by the following 2 criteria:</p>
 <ul>
 <li>Creatinine within normal range</li>
@@ -2944,8 +2943,8 @@ Yes
 </table>
 <p>This is not statistically significant using Fisher’s test</p>
 </div>
-<div id="dialysis-transplant-and-esrd" class="section level2">
-<h2>Dialysis, transplant and ESRD</h2>
+<div id="dialysis-transplant-and-esrd" class="section level3">
+<h3>Dialysis, transplant and ESRD</h3>
 <p>All these outcomes are sparse in this data set, even on restricting to subjects who have been diagnosed with lupus nephritis</p>
 <div class="sourceCode" id="cb21"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1"></a>prin4 <span class="op">%&gt;%</span></span>
 <span id="cb21-2"><a href="#cb21-2"></a><span class="st">  </span><span class="kw">tabyl</span>(dialysis) <span class="op">%&gt;%</span></span>
@@ -3158,6 +3157,7 @@ NA
 </tbody>
 </table>
 </div>
+</div>
 <div id="principle-5-short-term-renal-outcomes-are-worse-in-patients-who-present-with-gfr-60mlmin1.73-m2-andor-nephrotic-range-proteinuria-1-proteincreatinine-ratio" class="section level2">
 <h2>Principle 5: Short term renal outcomes are worse in patients who present with GFR &lt; 60mL/min/1.73 m2 and/or nephrotic-range proteinuria (&gt; 1 protein/creatinine ratio)</h2>
 <div class="sourceCode" id="cb24"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1"></a><span class="co"># Principle 5 -------------------------------------------------------------</span></span>
@@ -3170,8 +3170,9 @@ NA
 <span id="cb24-8"><a href="#cb24-8"></a><span class="st">  </span><span class="kw">ungroup</span>() <span class="op">%&gt;%</span></span>
 <span id="cb24-9"><a href="#cb24-9"></a><span class="st">  </span><span class="kw">tabyl</span>(gfr_class) <span class="op">%&gt;%</span></span>
 <span id="cb24-10"><a href="#cb24-10"></a><span class="st">  </span><span class="kw">mutate_at</span>(<span class="kw">vars</span>(<span class="kw">contains</span>(<span class="st">&#39;percent&#39;</span>)), <span class="op">~</span><span class="dv">100</span><span class="op">*</span>.x) <span class="op">%&gt;%</span></span>
-<span id="cb24-11"><a href="#cb24-11"></a><span class="st">  </span><span class="kw">kable</span>(<span class="dt">caption =</span> <span class="st">&#39;Distribution of GFR class at time of LN diagnosis&#39;</span>) <span class="op">%&gt;%</span></span>
-<span id="cb24-12"><a href="#cb24-12"></a><span class="st">  </span><span class="kw">kable_styling</span>()</span></code></pre></div>
+<span id="cb24-11"><a href="#cb24-11"></a><span class="st">  </span><span class="kw">kable</span>(<span class="dt">caption =</span> <span class="st">&#39;Distribution of GFR class at time of LN diagnosis&#39;</span>,</span>
+<span id="cb24-12"><a href="#cb24-12"></a>        <span class="dt">digits=</span><span class="dv">2</span>) <span class="op">%&gt;%</span></span>
+<span id="cb24-13"><a href="#cb24-13"></a><span class="st">  </span><span class="kw">kable_styling</span>()</span></code></pre></div>
 <table class="table" style="margin-left: auto; margin-right: auto;">
 <caption>
 Distribution of GFR class at time of LN diagnosis
@@ -3201,10 +3202,10 @@ Stage 1
 167
 </td>
 <td style="text-align:right;">
-71.3675214
+71.37
 </td>
 <td style="text-align:right;">
-92.777778
+92.78
 </td>
 </tr>
 <tr>
@@ -3215,10 +3216,10 @@ Stage 2
 11
 </td>
 <td style="text-align:right;">
-4.7008547
+4.70
 </td>
 <td style="text-align:right;">
-6.111111
+6.11
 </td>
 </tr>
 <tr>
@@ -3229,10 +3230,10 @@ Stage 3
 2
 </td>
 <td style="text-align:right;">
-0.8547009
+0.85
 </td>
 <td style="text-align:right;">
-1.111111
+1.11
 </td>
 </tr>
 <tr>
@@ -3243,7 +3244,7 @@ NA
 54
 </td>
 <td style="text-align:right;">
-23.0769231
+23.08
 </td>
 <td style="text-align:right;">
 NA
@@ -3251,7 +3252,9 @@ NA
 </tr>
 </tbody>
 </table>
-<p>We see that 93% of the available GFR classes are in Stage 1, and only 7% are worse than Stage 1. ## GFR changes</p>
+<p>We see that 93% of the available GFR classes are in Stage 1, and only 7% are worse than Stage 1.</p>
+<div id="gfr-changes-1" class="section level3">
+<h3>GFR changes</h3>
 <div class="sourceCode" id="cb25"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1"></a>gfr_id &lt;-<span class="st"> </span>prin4 <span class="op">%&gt;%</span></span>
 <span id="cb25-2"><a href="#cb25-2"></a><span class="st">  </span><span class="kw">filter</span>(<span class="op">!</span><span class="kw">is.na</span>(gfr_class)) <span class="op">%&gt;%</span></span>
 <span id="cb25-3"><a href="#cb25-3"></a><span class="st">  </span><span class="kw">count</span>(subject_id) <span class="op">%&gt;%</span></span>
@@ -3355,7 +3358,10 @@ Stage 3
 </tr>
 </tbody>
 </table>
-<p>So, no one starting in Stage 2 or 3 gets worse, while 4% of people starting in Stage 1 do get worse. ## Remission</p>
+<p>So, no one starting in Stage 2 or 3 gets worse, while 4% of people starting in Stage 1 do get worse.</p>
+</div>
+<div id="remission-1" class="section level3">
+<h3>Remission</h3>
 <div class="sourceCode" id="cb26"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1"></a>prin4 <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">filter</span>(subject_id <span class="op">%in%</span><span class="st"> </span>remission_id_mult) <span class="op">%&gt;%</span></span>
 <span id="cb26-2"><a href="#cb26-2"></a><span class="st">  </span><span class="kw">group_by</span>(subject_id) <span class="op">%&gt;%</span></span>
 <span id="cb26-3"><a href="#cb26-3"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">gets_to_remission =</span> <span class="kw">ifelse</span>(<span class="kw">any</span>(remission<span class="op">==</span><span class="st">&#39;Yes&#39;</span>, <span class="dt">na.rm=</span>T),<span class="dv">1</span>,<span class="dv">0</span>)) <span class="op">%&gt;%</span></span>
@@ -3439,13 +3445,16 @@ Yes
 </table>
 <p>A Fishers exact test gives a p-value of 0.4572083.</p>
 </div>
-<div id="dialysis-transplant-and-esrd-1" class="section level2">
-<h2>Dialysis, transplant and ESRD</h2>
+<div id="dialysis-transplant-and-esrd-1" class="section level3">
+<h3>Dialysis, transplant and ESRD</h3>
 <p>As we saw earlier, we don’t have sufficient information on these outcomes for this subset of subject who are LN-positive to assess how GFR stage at diagnosis is associated with them.</p>
+</div>
 </div>
 <div id="principle-6-rituximab-has-been-used-as-a-steroid-sparing-agent-for-induction-in-proliferative-ln-ln-vs-no-ln-3-4-vs-5" class="section level2">
 <h2>Principle 6: Rituximab has been used as a steroid-sparing agent for induction in proliferative LN (LN vs no-LN, 3-4 vs 5)</h2>
 <p>Rituximab use: IMMMED = 30 MEDCATON = 30</p>
+<div id="rituximab-use-by-nephritis-class" class="section level3">
+<h3>Rituximab use by nephritis class</h3>
 <div class="sourceCode" id="cb27"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1"></a><span class="co"># Principle 6 -------------------------------------------------------------</span></span>
 <span id="cb27-2"><a href="#cb27-2"></a></span>
 <span id="cb27-3"><a href="#cb27-3"></a>raw_biopsy &lt;-<span class="st"> </span><span class="kw">readRDS</span>(<span class="kw">here</span>(<span class="st">&#39;data/rda/biopsy_classes.rds&#39;</span>)) <span class="co"># Updated for LN34+5 class</span></span>
@@ -3626,6 +3635,7 @@ Total
 </tbody>
 </table>
 <p>This is not statistically significant (p-value = 0.8576421)</p>
+</div>
 <div id="is-there-differences-in-agegender-for-people-getting-rituximab" class="section level3">
 <h3>Is there differences in age/gender for people getting Rituximab</h3>
 <div class="sourceCode" id="cb29"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1"></a>demographic &lt;-<span class="st"> </span><span class="kw">readRDS</span>(<span class="kw">here</span>(<span class="st">&#39;data/rda/demographic.rds&#39;</span>))</span>
@@ -4256,7 +4266,7 @@ $(document).ready(function ()  {
       scrollTo: 0
     };
     options.showAndHide = true;
-    options.smoothScroll = true;
+    options.smoothScroll = false;
 
     // tocify
     var toc = $("#TOC").tocify(options).data("toc-tocify");
