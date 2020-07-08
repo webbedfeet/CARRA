@@ -132,6 +132,8 @@ library(naniar)
 
 ## properly order the visit variable
 out <- out %>%
+  mutate_at(vars(PROT30, DIPSTICK, SPOTURIN),
+            function(x) ifelse(x=='Not Done', NA, x)) %>%
   mutate(months = as.numeric(str_remove(visit, ' month'))) %>%
   mutate(months = ifelse(visit == 'Baseline', 0, months)) %>%
   mutate(visit = as.factor(visit)) %>%
@@ -149,3 +151,13 @@ out %>%
   filter(!is.na(months)) %>%
   select(visit, DIPSTICK, PROT30, SPOTURIN) %>%
   gg_miss_upset()
+
+## How many subjects haven't ever had any of the three variables taken.
+
+out %>% filter(!is.na(months)) %>%
+  group_split(subjectId) %>%
+  map_lgl(~select(., DIPSTICK, PROT30, SPOTURIN) %>% naniar::all_miss()) %>%
+  tabyl() %>%
+  rename("No data" = ".") %>%
+  adorn_pct_formatting() %>%
+  gt::gt()
