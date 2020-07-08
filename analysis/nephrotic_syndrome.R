@@ -113,7 +113,7 @@ data_dict %>%
   filter(table_name=='LABS',data_type=='Text', !str_detect(variable_description, 'Upper')) %>%
   select(starts_with('variable')) %>%
   kable(format='html', col.names = snakecase::to_sentence_case(names(.))) %>%
-  kable_styling(bootstrap_options = 'striped')
+  kable_styling(bootstrapt_options = 'striped')
 
 #' # Session information
 #'
@@ -124,3 +124,28 @@ d <- tibble(Package = pkgs) %>%
   mutate(Version = map(Package, p_ver) %>% map_chr(as.character))
 bl <- glue::glue_data(d, '{Package} ({Version})') %>% paste(collapse = '; ')
 cat(bl)
+
+
+# Missing value analysis --------------------------------------------------
+
+library(naniar)
+
+## properly order the visit variable
+out <- out %>%
+  mutate(months = as.numeric(str_remove(visit, ' month'))) %>%
+  mutate(months = ifelse(visit == 'Baseline', 0, months)) %>%
+  mutate(visit = as.factor(visit)) %>%
+  mutate(visit = fct_reorder(visit, months))
+
+out %>%
+  filter(!is.na(months)) %>%
+  select(visit, DIPSTICK, PROT30, SPOTURIN) %>%
+  miss_case_table() %>%
+  rename('Number of variables missing' = 'n_miss_in_case') %>%
+  gt::gt() %>%
+  fmt_number(columns = vars(pct_cases), decimals = 2)
+
+out %>%
+  filter(!is.na(months)) %>%
+  select(visit, DIPSTICK, PROT30, SPOTURIN) %>%
+  gg_miss_upset()
