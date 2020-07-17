@@ -2,9 +2,8 @@
 .RData
 .Rproj.user
 data/*
-<<<<<<< HEAD
 *.html
-
 **/*cache/*
 
 admin
+data
