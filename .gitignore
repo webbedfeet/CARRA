@@ -2,7 +2,7 @@
 .RData
 .Rproj.user
 data/*
-<<<<<<< HEAD
 *.html
-
 **/*cache/*
+
+data
