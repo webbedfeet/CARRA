@@ -96,9 +96,13 @@ LN_pos <-  LN_ISNRPS %>% full_join(LN_WHO) %>%
 LN_pos %>%
   count(folderName, LN_pos) %>%
   spread(LN_pos, n) %>%
-  mutate(pos_perc = `TRUE` / (`TRUE` + `FALSE`)*100) %>%
-  mutate(cum_perc = cumsum(coalesce(`TRUE`,0))/cumsum(coalesce(`TRUE`,0)+coalesce(`FALSE`,0))) %>%
-  rename('visit'='folderName','negative'=`FALSE`, 'positive'=`TRUE`) %>%
+  rename('pos' = `TRUE`, 'neg' = `FALSE`) %>%
+  mutate(pos_perc = pos / (pos + neg)*100) %>%
+  mutate(cum_pos = cumsum(ifelse(is.na(pos), 0, pos)),
+         cum_neg = cumsum(ifelse(is.na(neg), 0, neg))) %>%
+  mutate(cum_perc = cum_pos/(cum_pos+cum_neg)*100) %>%
+  rename('visit'='folderName') %>%
+  select(visit, neg, pos, pos_perc, cum_perc) %>%
   kable() %>%
   kable_styling()
 
@@ -131,7 +135,8 @@ compute_classes <- function(N){
   return(out)
 }
 
-LN_classes <- map(2:5, compute_classes)
+LN_classes <- map(2:5, compute_classes) %>%
+  Reduce(left_join, .)
 
 ## There seem to be some discrepancies in terms of unique data for individuals. Going
 ## diving into the biopsy data
