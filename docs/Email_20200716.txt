@@ -1,0 +1,47 @@
+Hi Abhijit
+
+
+
+I hope you are doing well. Laura and I met with our writing group. We are getting close to getting the paper together for submission. We need help with a few things:
+
+
+
+    Could you provide us with a demographics breakdown so we can do a table 1 with
+        Age at enrollment
+        Gender
+        Ethnicity
+        Time since diagnosis
+
+
+
+    The total number of LN cases were reported as 234 and 235 different places throughout the data. Could you help clarify this?
+
+
+
+    For principle 2,  the total of LN is 217 instead of 235. I think this wasn’t updated when we added in the rest of the nephritis patients (class I and II) to principle 1
+
+
+
+    For principle 2, can we do a kaplan meyer curve for time to nephritis
+
+
+
+    For principle 3, can you please report the UPC by class both the numerical and categorical variable? I know the data is limited but we’d like to report what we have
+
+
+
+    For principle 4, the GFR table total is 234 not 235 including NA. Where did the one patient go?
+
+
+
+    For principle 5, what is the p-value for the change in GFR? Can we do this by collapsing state 2 and state 3 into one group and compare GFR >60 vs <60?
+
+
+
+    For principle 6, for the top medications- which patients are being compared? What is the denominator?
+
+
+
+Thanks!
+
+Kathleen and Laura

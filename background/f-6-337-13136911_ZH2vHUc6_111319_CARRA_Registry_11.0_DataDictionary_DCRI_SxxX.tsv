@@ -1,4 +1,4 @@
-"Cohort"	"Form.Name"	"Form.Type"	"Table.Name"	"Variable.Name"	"Variable.Description"	"Data.Type"	"Code"	"Code.Description"	"Specify"	"FixedUnit"	"Logline"	"LowerRange"	"UpperRange"
+"cohort"	"form_name"	"form_type"	"table_name"	"variable_name"	"variable_description"	"data_type"	"code"	"code_description"	"specify"	"fixed_unit"	"logline"	"lower_range"	"upper_range"
 "1"	"Registry - All"	"Subject Enrollment"	"DB Admin"	"ENROLL"	"SUBID"	"Global Subject ID"	"Text"	NA	NA	NA	NA	"FALSE"	NA	NA
 "2"	"Registry - All"	"Subject Enrollment"	"DB Admin"	"ENROLL"	"ENRLDATE"	"Enroll Date"	"DateTime"	NA	NA	NA	NA	"FALSE"	NA	NA
 "3"	"Registry - All"	"Subject Enrollment"	"DB Admin"	"ENROLL"	"ENRLBY"	"Enrolled By"	"Text"	NA	NA	NA	NA	"FALSE"	NA	NA

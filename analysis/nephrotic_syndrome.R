@@ -1,7 +1,7 @@
 #' ---
 #' title: Defining nephrotic syndrome in the data
 #' author: Abhijit Dasgupta
-#' date: February 20, 2020
+#' date: '`r format(Sys.Date(), "%B %d, %Y")`'
 #' output:
 #'   html_document:
 #'     code_folding: hide
@@ -14,6 +14,7 @@
 #'
 #+ preamble, include = F
 knitr::opts_chunk$set(message = F, warning = F)
+pacman::p_load(char=c('tidyverse','janitor','broom', 'knitr','kableExtra', 'vroom', 'here','pacman'))
 abhiR::reload()
 #'
 #' <hr/>
@@ -22,10 +23,6 @@ abhiR::reload()
 #' We have a paucity of data that can help us define **nephrotic syndrome** among the study
 #' subjects. The availability of urine protein:creatinine ratio is limited, and it appears that
 #' serum albumin is not measured on these subject.
-#'
-#' How can we proceed? Does this mean reaching out to the Boston folks, or are we just stuck.
-#' Please double check my variable extractions to see that I'm not missing obvious variables that
-#' are available in the dataset
 #'
 #' <hr/>
 #'
@@ -116,7 +113,7 @@ data_dict %>%
   filter(table_name=='LABS',data_type=='Text', !str_detect(variable_description, 'Upper')) %>%
   select(starts_with('variable')) %>%
   kable(format='html', col.names = snakecase::to_sentence_case(names(.))) %>%
-  kable_styling(bootstrap_options = 'striped')
+  kable_styling(bootstrapt_options = 'striped')
 
 #' # Session information
 #'
@@ -127,3 +124,40 @@ d <- tibble(Package = pkgs) %>%
   mutate(Version = map(Package, p_ver) %>% map_chr(as.character))
 bl <- glue::glue_data(d, '{Package} ({Version})') %>% paste(collapse = '; ')
 cat(bl)
+
+
+# Missing value analysis --------------------------------------------------
+
+library(naniar)
+
+## properly order the visit variable
+out <- out %>%
+  mutate_at(vars(PROT30, DIPSTICK, SPOTURIN),
+            function(x) ifelse(x=='Not Done', NA, x)) %>%
+  mutate(months = as.numeric(str_remove(visit, ' month'))) %>%
+  mutate(months = ifelse(visit == 'Baseline', 0, months)) %>%
+  mutate(visit = as.factor(visit)) %>%
+  mutate(visit = fct_reorder(visit, months))
+
+out %>%
+  filter(!is.na(months)) %>%
+  select(visit, DIPSTICK, PROT30, SPOTURIN) %>%
+  miss_case_table() %>%
+  rename('Number of variables missing' = 'n_miss_in_case') %>%
+  gt::gt() %>%
+  fmt_number(columns = vars(pct_cases), decimals = 2)
+
+out %>%
+  filter(!is.na(months)) %>%
+  select(visit, DIPSTICK, PROT30, SPOTURIN) %>%
+  gg_miss_upset()
+
+## How many subjects haven't ever had any of the three variables taken.
+
+out %>% filter(!is.na(months)) %>%
+  group_split(subjectId) %>%
+  map_lgl(~select(., DIPSTICK, PROT30, SPOTURIN) %>% naniar::all_miss()) %>%
+  tabyl() %>%
+  rename("No data" = ".") %>%
+  adorn_pct_formatting() %>%
+  gt::gt()
