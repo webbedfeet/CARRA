@@ -68,3 +68,76 @@ age <- vroom(here('data/raw/visit.list_data_2020-01-31_1545.csv')) %>%
 
 demographics <- readRDS(here('data/rda/demographic.rds'))
 
+dat <- age %>% left_join(demographics, by='subject_id') %>%
+  mutate(time_since_dx = visage - dxdage)
+
+races <- dat %>%
+  select(white, black, asian, amerind, mideast, nathwn, othrace) %>%
+  rowwise() %>%
+  mutate(present = sum(c_across(everything()))) %>%
+  mutate(missing = ifelse(present==0, 1,0)) %>%
+  mutate(mixed = ifelse(present >1, 1, 0)) %>%
+  select(-present) %>% ungroup() %>%
+  bind_cols(subject_id=dat$subject_id)
+
+races[races$mixed==1, select(races, white:othrace) %>% names()] = 0
+
+races %>%
+  pivot_longer(cols = -subject_id,
+               names_to = 'race', values_to = 'indic') %>%
+  filter(indic != 0) %>%
+  mutate(race = str_to_title(race)) %>%
+  mutate(race = ifelse(race=='Missing', NA, race)) %>%
+  mutate(race = fct_infreq(race)) %>%
+  mutate(race = fct_lump_min(race, min=15, other_level = 'Other race')) %>%
+  tabyl(race) %>%
+  adorn_pct_formatting()
+
+races2 <- races %>%
+  pivot_longer(cols = c(-subject_id),
+               names_to = 'race', values_to = 'indic') %>%
+  filter(indic != 0) %>%
+  mutate(race = str_to_title(race),
+         race = ifelse(race == 'Missing', NA, race),
+         race = fct_infreq(race),
+         race = fct_lump_min(race, min=15, other_level = 'Other race'))
+
+
+tab_race <- races %>%
+  pivot_longer(cols = c(-subject_id),
+               names_to = 'race', values_to = 'indic') %>%
+  filter(indic != 0) %>%
+  mutate(race = str_to_title(race),
+         race = ifelse(race == 'Missing', NA, race),
+         race = fct_infreq(race),
+         race = fct_lump_min(race, min=15, other_level = 'Other race')) %>%
+  tabyl(race) %>%
+  adorn_pct_formatting()
+
+tab_race_eth <- races %>%
+  bind_cols(hispanic = dat$hispanic) %>%
+  pivot_longer(cols = c(-subject_id, -hispanic),
+               names_to = 'race', values_to = 'indic') %>%
+  filter(indic != 0) %>%
+  mutate(hispanic = ifelse(hispanic==1, 'Hispanic','Non-hispanic')) %>%
+  mutate(race = str_to_title(race),
+         race = ifelse(race == 'Missing', NA, race),
+         race = fct_infreq(race),
+         race = fct_lump_min(race, min=15, other_level = 'Other race')) %>%
+  tabyl(race, hispanic) %>%
+  adorn_percentages() %>%
+  adorn_pct_formatting() %>%
+  adorn_ns()
+
+dat1 <- dat %>% left_join(races2 %>% select(-indic)) %>%
+  mutate(hispanic = factor(ifelse(hispanic==1, 'Hispanic', 'Non-hispanic')))
+label(dat1$sex) = 'Sex'
+label(dat1$visage) = "Age at enrollment"
+label(dat1$time_since_dx) = "Time since diagnosis"
+label(dat1$race) = 'Race'
+label(dat1$hispanic) = 'Ethnicity'
+
+units(dat1$time_since_dx) = 'years'
+units(dat1$visage) = 'years'
+
+table1::table1(~ visage + sex + race + hispanic + time_since_dx, data=dat1)
