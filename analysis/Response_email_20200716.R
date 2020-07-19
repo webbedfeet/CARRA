@@ -129,6 +129,7 @@ tab_race_eth <- races %>%
   adorn_pct_formatting() %>%
   adorn_ns()
 
+library(table1)
 dat1 <- dat %>% left_join(races2 %>% select(-indic)) %>%
   mutate(hispanic = factor(ifelse(hispanic==1, 'Hispanic', 'Non-hispanic')))
 label(dat1$sex) = 'Sex'
