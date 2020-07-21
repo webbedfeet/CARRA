@@ -4,6 +4,7 @@
 #' date: "`r format(Sys.time(), '%B %d, %Y %I:%m %p')`"
 #' output:
 #'   html_document:
+#'     css: style.css
 #'     toc: true
 #'     toc_depth: 3
 #'     toc_float:
@@ -523,7 +524,12 @@ prin4 %>%
   kable(caption = 'Frequency distribution for ESRD', digits=2)%>%
   kable_styling(full_width = F)
 
-
+#' > The information available for subject 597 showed that diagnosis
+#' > was at an unscheduled visit, and where that visit was temporally
+#' > between baseline, 6 month and 12 month visit was not available. So
+#' > this subject was removed from the analysis since the number of
+#' > visits post diagnosis could not be definitively computed for
+#' > that subject.
 
 
 #' ## Principle 5: Short term renal outcomes are worse in patients who present with GFR < 60mL/min/1.73 m2 and/or nephrotic-range proteinuria (> 1 protein/creatinine ratio)
