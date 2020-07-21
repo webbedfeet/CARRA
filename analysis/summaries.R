@@ -722,18 +722,7 @@ tabyl(dat=tmp, First, Last) %>% adorn_percentages('row') %>%
 #' So, no one starting in Stage 2 or 3 gets worse, while 4% of people
 #' starting in Stage 1 do get worse.
 #'
-#' **A bit of statistics**
 
-tmp1 <- tmp %>%
-  mutate(across(First:Last, as.factor)) %>%
-  mutate(across(First:Last, ~fct_recode(.x, 'Stage 2' = 'Stage 3'))) %>%
-  mutate(across(First:Last, ~fct_recode(.x, 'Stage 2+3' = 'Stage 2')))
-
-tmp1_tbl <- tabyl(tmp1, First, Last)
-tmp1_tbl %>%
-  adorn_percentages() %>%
-    adorn_pct_formatting() %>%
-  adorn_ns()
 
 #'
 #' ### Remission
