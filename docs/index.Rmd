@@ -20,6 +20,12 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Reports
 
-+ [Overall report](analysis/summaries.html)
-+ [Nephrotic syndrome and missing data](analysis/nephrotic_syndrome.html)
++ [Overall report](summaries.html)
++ [Nephrotic syndrome and missing data](nephrotic_syndrome.html)
+
+# Correspondence
+
++ [Response to 2020-07-16 email](Response_email_20200716.html)
+
+
 

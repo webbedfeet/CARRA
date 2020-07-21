@@ -2,7 +2,7 @@
 .RData
 .Rproj.user
 data/*
-*.html
+analysis/*.html
 **/*cache/*
 
 admin
