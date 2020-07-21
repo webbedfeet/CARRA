@@ -3,14 +3,15 @@
 #' author: Abhijit Dasgupta, PhD
 #' date: "`r format(Sys.time(), '%B %d, %Y %I:%m %p')`"
 #' output:
-#'   prettydoc::html_pretty:
+#'   rmdformats::material:
 #'     css: style.css
-#'     toc: true
-#'     toc_depth: 3
+#'     #toc: true
+#'     #toc_depth: 3
 #'     #toc_float: true
-#'     theme: architect
-#'     highlight: zenburn
+#'     #theme: architect
+#'     #highlight: zenburn
 #'     self_contained: true
+#'     code_folding: hide
 #' ---
 #'
 #+ preamble, echo=F, results='hide', message=F, warning=F
@@ -24,8 +25,8 @@ for(f in dir_ls(here("lib/R"), glob = "*.R")){
   source(f)
 }
 
-knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE,
-                      cache = F)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE,
+                      cache = T)
 # all_subjects <- vroom(here('data/raw/all_rows_data_2020-01-31_1545.csv'),
 #                       col_select = c(subjectId, visit = folderName, eventIndex)) %>%
 #   distinct() %>%
@@ -58,7 +59,7 @@ write.table(data_dict, sep = '\t', file = here('background/f-6-337-13136911_ZH2v
 
 
 # Principle 1 -------------------------------------------------------------
-#' ## Principle 1 : 20% to 75% of children with SLE will develop nephritis
+#' # Principle 1 : 20% to 75% of children with SLE will develop nephritis
 #' From the data dictionary, this question is answered in the variable SLICC00
 #'
 #' I have verified that this definition is compatible with the raw data when
@@ -85,7 +86,7 @@ total_ln %>%
   kable_styling(full_width = F)
 
 
-#' ## Principle 2: 82% of LN in cSLE develops within the first year of diagnosis and 92% within 2 years
+#' # Principle 2: 82% of LN in cSLE develops within the first year of diagnosis and 92% within 2 years
 #'
 #+ echo = F
 # Principle 2 -------------------------------------------------------------
@@ -216,7 +217,7 @@ survminer::ggsurvplot(s1, risk.table = FALSE, conf.int = TRUE,
 #' > that we're dealing with rounding error
 
 # Principle 3 -------------------------------------------------------------
-#' ## Principle 3: Membranous (class V) LN more often presents with nephrotic syndrome than proliferative LN (class III or IV)
+#' # Principle 3: Membranous (class V) LN more often presents with nephrotic syndrome than proliferative LN (class III or IV)
 #'
 #' Definition of LN classes:
 #'
@@ -407,7 +408,7 @@ LN_classes %>%
   kable_styling()
 
 #'
-#' ## Principle 4: Short term renal outcomes are worse in blacks
+#' # Principle 4: Short term renal outcomes are worse in blacks
 # Principle 4 -------------------------------------------------------------
 #' Based on conversations, we will consider only LN patients and take their
 #' first visit with confirmed LN as the baseline time for the GFR change
@@ -549,17 +550,22 @@ kable(tabs$`Non-black`, caption = 'Change in GFR stage among non-blacks') %>%
 #+ permutation, cache=TRUE
 ## Permutation test
 
-worse = rep(0, 1000)
-set.seed(1034)
-for(i in 1:5000){
-  # print(i)
-  worse[i] <- tmp %>%
-    mutate(bl = sample(black)) %>%
-    filter(bl=='Black') %>%
-    count(First, Last) %>%
-    filter(First=='Stage 1', Last != 'Stage 1') %>%
-    pull(n) %>%
-    sum()
+if(!file.exists('worse.rds')){
+  worse = rep(0, 1000)
+  set.seed(1034)
+  for(i in 1:5000){
+    # print(i)
+    worse[i] <- tmp %>%
+      mutate(bl = sample(black)) %>%
+      filter(bl=='Black') %>%
+      count(First, Last) %>%
+      filter(First=='Stage 1', Last != 'Stage 1') %>%
+      pull(n) %>%
+      sum()
+  }
+  saveRDS(worse,'worse.rds')
+} else{
+  worse <- readRDS('worse.rds')
 }
 
 #' We can perform a permutation test to see if blacks do worse than non-blacks
@@ -682,7 +688,7 @@ prin4 %>%
   kable_styling(full_width = F)
 
 
-#' ## Principle 5: Short term renal outcomes are worse in patients who present with GFR < 60mL/min/1.73 m2 and/or nephrotic-range proteinuria (> 1 protein/creatinine ratio)
+#' # Principle 5: Short term renal outcomes are worse in patients who present with GFR < 60mL/min/1.73 m2 and/or nephrotic-range proteinuria (> 1 protein/creatinine ratio)
 # Principle 5 -------------------------------------------------------------
 
 # We start with prin4, which only contains subjects with LN and starts
@@ -737,6 +743,42 @@ tabyl(dat=tmp, First, Last) %>% adorn_percentages('row') %>%
 #' starting in Stage 1 do get worse.
 #'
 
+prin4 %>%
+  filter(subject_id %in% gfr_id) %>%
+  filter(!is.na(gfr_class)) %>%
+  arrange(subject_id,event_index) %>%
+  group_by(subject_id) %>%
+  filter(event_index==min(event_index)|event_index==max(event_index)) %>%
+  mutate(first_visit = visit[event_index == min(event_index)],
+         last_visit = visit[event_index==max(event_index)],
+         egfr_visit = ifelse(event_index == min(event_index), 'First','Last'),
+         black = ifelse(black==1, 'Black','Non-black')) %>%
+  ungroup() %>%
+  select(subject_id, black, first_visit, last_visit,
+         egfr_visit,eGFR) %>%
+  spread(egfr_visit, eGFR) %>%
+  mutate(gfr_change = Last-First) %>%
+  mutate(first_stage2 = ifelse(First <= 60, 'Stage 2+','Stage 1'))-> tmp1
+
+tmp2 <- tmp1 %>% gather(visit, value, First, Last)
+tmp2 <- tmp2 %>%
+  mutate(visit = factor(paste(visit, 'visit'))) %>%
+  mutate(x_pos = as.numeric(visit) + runif(nrow(.),-0.1, 0.1))
+
+
+ggplot(tmp2, aes(x = x_pos, y = value, color = first_stage2))+
+  geom_line(aes(group = subject_id), alpha = 0.2, size=0.7)+
+  geom_point(shape=15, stroke=1) +
+  geom_hline(yintercept = 60, linetype=2, alpha = 0.5)+
+  scale_x_continuous('', breaks = c(1,2), labels = c('First visit','Last visit'))+
+  scale_y_continuous(bquote('eGFR level (mL / min / 1.73'~m^2~')'),
+                     breaks = c(0,60,100, 200, 300))+
+  coord_cartesian(xlim = c(0.5,2.5))+
+  labs(color = 'First visit stage')+
+  theme_minimal()+
+  theme(panel.grid.major.x = element_blank(),
+        axis.text.x = element_text(face='bold', size=12))+
+  ggsci::scale_color_npg()
 
 #'
 #' ### Remission
@@ -770,7 +812,7 @@ tab_gfr_remission %>%
 #' for this subset of subject who are LN-positive to assess how
 #' GFR stage at diagnosis is associated with them.
 #'
-#' ## Principle 6: Rituximab has been used as a steroid-sparing agent for induction in proliferative LN (LN vs no-LN, 3-4 vs 5)
+#' # Principle 6: Rituximab has been used as a steroid-sparing agent for induction in proliferative LN (LN vs no-LN, 3-4 vs 5)
 #'
 #' Rituximab use: IMMMED = 30
 #' MEDCATON = 30
