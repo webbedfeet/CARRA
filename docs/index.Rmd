@@ -1,15 +1,25 @@
 ---
-title: "Documents generated"
-author: "Abhijit Dasgupta"
-output: html_document
+title: "CARRA project"
+author: "Abhijit Dasgupta, PhD"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+output: 
+  html_document:
+    theme: sandstone
+    highlight: zenburn
+ 
 ---
 
-# Analytic documents
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
 
-[Report](summaries.html)
+# Collaborators
 
++ Laura Lewandowski
++ Kathleen Vazzana
 
-# Correspondence
+# Reports
 
-[Responses to email dated 2020-07-16](Response_email_20200716.html)
++ [Overall report](analysis/summaries.html)
++ [Nephrotic syndrome and missing data](analysis/nephrotic_syndrome.html)
 
