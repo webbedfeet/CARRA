@@ -14,3 +14,7 @@ h2 {
   border-style: outset;
 padding-left: 20px;
 }
+
+a {
+  color: blue;
+}

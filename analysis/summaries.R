@@ -3,12 +3,12 @@
 #' author: Abhijit Dasgupta, PhD
 #' date: "`r format(Sys.time(), '%B %d, %Y %I:%m %p')`"
 #' output:
-#'   html_document:
+#'   prettydoc::html_pretty:
 #'     css: style.css
 #'     toc: true
 #'     toc_depth: 3
-#'     toc_float: true
-#'     theme: yeti
+#'     #toc_float: true
+#'     theme: architect
 #'     highlight: zenburn
 #'     self_contained: true
 #' ---

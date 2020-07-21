@@ -3,9 +3,9 @@ title: "CARRA project"
 author: "Abhijit Dasgupta, PhD"
 date: "`r format(Sys.Date(), '%B %d, %Y')`"
 output: 
-  html_document:
-    theme: yeti
+  prettydoc::html_pretty:
     highlight: zenburn
+    theme: architect
  
 ---
 
@@ -20,7 +20,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Reports
 
-+ [Overall report](summaries.html)
++ [Overall report (last updated: `r as.Date(file.info('summaries.html')$mtime)`)](summaries.html) 
 + [Nephrotic syndrome and missing data](nephrotic_syndrome.html)
 
 # Correspondence
