@@ -7,16 +7,13 @@
 #'     css: style.css
 #'     toc: true
 #'     toc_depth: 3
-#'     toc_float:
-#'       collapsed: true
-#'       smooth_scroll: false
+#'     toc_float: false
 #'     theme: sandstone
 #'     highlight: zenburn
-#'     code_folding: hide
 #'     self_contained: true
 #' ---
 #'
-#+ preamble, echo=T, results='hide', message=F, warning=F
+#+ preamble, echo=F, results='hide', message=F, warning=F
 # Preamble ----------------------------------------------------------------
 library(pacman)
 p_load(char = c('readxl','tidyverse','data.table','glue','fs','here',
@@ -27,7 +24,7 @@ for(f in dir_ls(here("lib/R"), glob = "*.R")){
   source(f)
 }
 
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE,
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE,
                       cache = F)
 # all_subjects <- vroom(here('data/raw/all_rows_data_2020-01-31_1545.csv'),
 #                       col_select = c(subjectId, visit = folderName, eventIndex)) %>%
@@ -90,7 +87,7 @@ total_ln %>%
 
 #' ## Principle 2: 82% of LN in cSLE develops within the first year of diagnosis and 92% within 2 years
 #'
-#+ echo = T
+#+ echo = F
 # Principle 2 -------------------------------------------------------------
 # raw_biopsy <- readRDS(here('data/rda/biopsy_classes.rds'))
 # baseline_LN <- all_subjects %>% left_join(raw_biopsy) %>%

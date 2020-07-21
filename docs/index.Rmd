@@ -1,0 +1,15 @@
+---
+title: "Documents generated"
+author: "Abhijit Dasgupta"
+output: html_document
+---
+
+# Analytic documents
+
+[Report](summaries.html)
+
+
+# Correspondence
+
+[Responses to email dated 2020-07-16](Response_email_20200716.html)
+
