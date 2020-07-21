@@ -4,10 +4,14 @@ author: Abhijit Dasgupta, PhD
 date: "`r format(Sys.time(), '%B %d, %Y %I:%m %p')`"
 output:
   html_document:
+    css: style.css
     toc: true
-    toc_float: true
-    theme: cerulean
-    highlight: espresso
+    toc_depth: 3
+    toc_float:
+      collapsed: true
+      smooth_scroll: false
+    theme: sandstone
+    highlight: zenburn
     code_folding: hide
 ---
 
@@ -17,12 +21,14 @@ output:
 library(pacman)
 p_load(char = c('readxl','tidyverse','data.table','glue','fs','here',
                 'knitr','kableExtra', 'vroom', 'janitor'))
-source(here('lib/R/pval_scientific.R'))
-
+#source(here('lib/R/pval_scientific.R'))
+for(f in dir_ls(here("lib/R"), glob = "*.R")){
+  message(paste("Loading", basename(f)))
+  source(f)
+}
 
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE,
                       cache = F)
-opts <- options(knitr.kable.NA='')
 # all_subjects <- vroom(here('data/raw/all_rows_data_2020-01-31_1545.csv'),
 #                       col_select = c(subjectId, visit = folderName, eventIndex)) %>%
 #   distinct() %>%
@@ -153,12 +159,36 @@ biopsy <- all_subjects %>% select(subject_id) %>% distinct() %>% left_join(raw_b
   mutate(time_to_pos_biopsy = biopsdtc - dxdt) %>%
   filter(LN==1)
 
-biopsy %>% count(time_to_pos_biopsy) %>% mutate(prob = 100*cumsum(n)/sum(n)) %>%
-  filter(time_to_pos_biopsy <=2) %>%
-  kable(col.names = c('Years', 'N', 'Cumulative probability'),
-        caption = 'Time from diagnosis to positive biopsy',
-        digits=2) %>%
-  kable_styling(full_width = F)
+# LN_pos <-  LN_ISNRPS %>% full_join(LN_WHO) %>%
+#   mutate(LN_pos = ISNRPS_pos | WHO_pos) %>%
+#   select(-ISNRPS_pos, -WHO_pos) %>%
+#   mutate(folderName = as.factor(folderName)) %>%
+#   mutate(folderName = fct_relevel(folderName, 'Baseline','3 month','6 month',
+#                                   '12 month','18 month','24 month','30 month','36 month'))
+# LN_pos %>%
+#   count(folderName, LN_pos) %>%
+#   spread(LN_pos, n) %>%
+#   rename('pos' = `TRUE`, 'neg' = `FALSE`) %>%
+#   mutate(pos_perc = pos / (pos + neg)*100) %>%
+#   mutate(cum_pos = cumsum(ifelse(is.na(pos), 0, pos)),
+#          cum_neg = cumsum(ifelse(is.na(neg), 0, neg))) %>%
+#   mutate(cum_perc = cum_pos/(cum_pos+cum_neg)*100) %>%
+#   rename('visit'='folderName') %>%
+#   select(visit, neg, pos, pos_perc, cum_perc) %>%
+#   kable() %>%
+#   kable_styling()
+biopsy %>%
+  mutate(time_to_pos_biopsy = factor(time_to_pos_biopsy),
+         time_to_pos_biopsy = fct_other(time_to_pos_biopsy,
+                                        keep = as.character(-1:2),
+                                        other_level = '3+')) %>%
+  tabyl(time_to_pos_biopsy) %>%
+  rename('Years' = time_to_pos_biopsy) %>%
+  adorn_pct_formatting() %>%
+  adorn_totals() %>%
+  kable(caption = 'Time from diagnosis to positive biopsy') %>%
+  kable_styling(full_width=FALSE)
+
 
 # Principle 3 -------------------------------------------------------------
 ```
@@ -325,6 +355,10 @@ prin4 <- prin4 %>%
   fill(first_ln, .direction='down') %>%
   ungroup() %>%
   filter(!is.na(first_ln))
+
+all_rows <- vroom(here('data/raw/all_rows_data_2020-01-31_1545.csv'))
+LN_classes <- map(2:5, compute_classes) %>%
+  Reduce(left_join, .)
 ```
 
 There are a total of `r length(unique(raw_biopsy$subject_id[raw_biopsy$LN==1]))` LN
@@ -359,7 +393,7 @@ prin4 %>% count(subject_id) %>% tabyl(n) %>%
   kable_styling(full_width = F)
 ```
 
-## GFR changes
+### GFR changes
 
 
 ```{r gfr_change_black}
@@ -436,7 +470,7 @@ prin4 %>% filter(subject_id %in% gfr_id) %>%
   spread(egfr_visit, eGFR) %>%
   mutate(egfr_change = Last - First) %>%
   tableone::CreateTableOne(vars = c('egfr_change'), strata = c('black')) %>%
-  print(nonnormal = c('egfr_change')) %>%
+  print(nonnormal = c('egfr_change'), printToggle=F) %>%
   tableone::kableone() %>%
   kable_styling()
 ```
@@ -445,11 +479,11 @@ This shows no evidence overall that eGFR changes from time of diagnosis.
 This is consistent with the previous result which shows that the vast
 majority of LN patients stay in the same eGFR stage after LN diagnosis.
 
-## Remission
+### Remission
 We are defining remission by the following 2 criteria:
 
-    - Creatinine within normal range
-    - urine red blood cells\<10/high powered field
+- Creatinine within normal range
+- urine red blood cells\<10/high powered field
 
 ```{r }
 tb <- prin4 %>% group_by(subject_id) %>%
@@ -516,27 +550,37 @@ tbl_black_remission %>%
 
 This is not statistically significant using Fisher's test
 
-## Dialysis, transplant and ESRD
+### Dialysis, transplant and ESRD
 
 All these outcomes are sparse in this data set, even on restricting to
 subjects who have been diagnosed with lupus nephritis
 
 ```{r }
-prin4$dialysis %>%
-  tabyl() %>%
+prin4 %>%
+  tabyl(dialysis) %>%
   mutate_at(vars(contains('percent')), ~100*.x) %>%
-  kable(caption = 'Frequency distribution for dialysis')
+  kable(caption = 'Frequency distribution for dialysis', digits=2) %>%
+  kable_styling(full_width = F)
 
-prin4$transplant %>%
-  tabyl() %>%
+prin4 %>%
+  tabyl(transplant) %>%
   mutate_at(vars(contains('percent')), ~100*.x) %>%
-  kable(caption = 'Frequency distribution for transplant')
+  kable(caption = 'Frequency distribution for transplant', digits=2)%>%
+  kable_styling(full_width = F)
 
-prin4$esrd %>%
-  tabyl() %>%
+prin4 %>%
+  tabyl(esrd) %>%
   mutate_at(vars(contains('percent')), ~100*.x) %>%
-  kable(caption = 'Frequency distribution for ESRD')
+  kable(caption = 'Frequency distribution for ESRD', digits=2)%>%
+  kable_styling(full_width = F)
 ```
+
+> The information available for subject 597 showed that diagnosis
+> was at an unscheduled visit, and where that visit was temporally
+> between baseline, 6 month and 12 month visit was not available. So
+> this subject was removed from the analysis since the number of
+> visits post diagnosis could not be definitively computed for
+> that subject.
 
 ## Principle 5: Short term renal outcomes are worse in patients who present with GFR < 60mL/min/1.73 m2 and/or nephrotic-range proteinuria (> 1 protein/creatinine ratio)
 
@@ -551,13 +595,15 @@ prin4 %>% group_by(subject_id) %>%
   ungroup() %>%
   tabyl(gfr_class) %>%
   mutate_at(vars(contains('percent')), ~100*.x) %>%
-  kable(caption = 'Distribution of GFR class at time of LN diagnosis') %>%
+  kable(caption = 'Distribution of GFR class at time of LN diagnosis',
+        digits=2) %>%
   kable_styling()
 ```
 
 We see that 93% of the available GFR classes are in Stage 1, and
 only 7% are worse than Stage 1.
-## GFR changes
+
+### GFR changes
 
 
 ```{r gfr_change}
@@ -593,7 +639,8 @@ tabyl(dat=tmp, First, Last) %>% adorn_percentages('row') %>%
 
 So, no one starting in Stage 2 or 3 gets worse, while 4% of people
 starting in Stage 1 do get worse.
-## Remission
+
+### Remission
 
 ```{r }
 prin4 %>% filter(subject_id %in% remission_id_mult) %>%
@@ -603,7 +650,10 @@ prin4 %>% filter(subject_id %in% remission_id_mult) %>%
   ungroup() %>%
   select(subject_id, event_index, gfr_class, gets_to_remission) %>%
   filter(!is.na(gfr_class)) %>%
-  tabyl(gets_to_remission, gfr_class) -> tab_gfr_remission
+  rename(Remission = gets_to_remission, `GFR class` = gfr_class) %>%
+  mutate(Remission = ifelse(Remission==1, 'Yes','No')) %>%
+  rename(`Ever in remission` = Remission) %>%
+  tabyl(`Ever in remission`, `GFR class`) -> tab_gfr_remission
 
 tab_gfr_remission %>%
   adorn_percentages('col') %>%
@@ -617,9 +667,7 @@ tab_gfr_remission %>%
 A Fishers exact test gives a p-value of
 `r tab_gfr_remission %>% fisher.test() %>% broom::tidy() %>% pull(p.value)`.
 
-```{r }
-## Dialysis, transplant and ESRD
-```
+### Dialysis, transplant and ESRD
 
 As we saw earlier, we don't have sufficient information on these outcomes
 for this subset of subject who are LN-positive to assess how
@@ -630,6 +678,7 @@ GFR stage at diagnosis is associated with them.
 Rituximab use: IMMMED = 30
 MEDCATON = 30
 
+### Rituximab use by nephritis class
 
 ```{r rtx}
 # Principle 6 -------------------------------------------------------------
@@ -733,6 +782,7 @@ baseline, and compare the GFR levels for Rituximab users and non-users
 # prin4 is the dataset we will use, looking at the time of diagnosis,
 # and then linking with Rituximab use
 
+opts <- options(knitr.kable.NA='')
 rtx_gfr <- prin4 %>% group_by(subject_id) %>%
   filter(event_index == min(event_index)) %>%
   ungroup() %>%
@@ -751,9 +801,11 @@ rtx_gfr %>%
         digits=2) %>%
   kable_styling(full_width = F)
 
+options(opts)
+
 ```
 ```{r rtx_gfr_plot, fig.width=4, fig.height=4}
-ggplot(rtx_gfr, aes(x = ritux, y = eGFR))+geom_violin()+
+ggplot(rtx_gfr, aes(x = Rituximab, y = eGFR))+geom_violin()+
   ggpubr::stat_compare_means(method='wilcox.test',
                              label.x.npc = 0.8)+
   scale_y_log10() +

@@ -20,8 +20,11 @@
 library(pacman)
 p_load(char = c('readxl','tidyverse','data.table','glue','fs','here',
                 'knitr','kableExtra', 'vroom', 'janitor'))
-source(here('lib/R/pval_scientific.R'))
-
+#source(here('lib/R/pval_scientific.R'))
+for(f in dir_ls(here("lib/R"), glob = "*.R")){
+  message(paste("Loading", basename(f)))
+  source(f)
+}
 
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE,
                       cache = F)
@@ -138,39 +141,67 @@ raw_biopsy <- readRDS(here('data/rda/biopsy_classes.rds')) %>%
             LN = ifelse(any(LN==1, na.rm=T), 1,0)) %>%
   ungroup()
 biopsy <- all_subjects %>% select(subject_id) %>% distinct() %>% left_join(raw_biopsy) %>% left_join(pdis) %>%
-  mutate(time_to_pos_biopsy = biopsdtc - dxdt) %>%
-  filter(LN==1)
+  mutate(time_to_pos_biopsy = biopsdtc - dxdt)
 
-LN_pos <-  LN_ISNRPS %>% full_join(LN_WHO) %>%
-  mutate(LN_pos = ISNRPS_pos | WHO_pos) %>%
-  select(-ISNRPS_pos, -WHO_pos) %>%
-  mutate(folderName = as.factor(folderName)) %>%
-  mutate(folderName = fct_relevel(folderName, 'Baseline','3 month','6 month',
-                                  '12 month','18 month','24 month','30 month','36 month'))
-LN_pos %>%
-  count(folderName, LN_pos) %>%
-  spread(LN_pos, n) %>%
-  rename('pos' = `TRUE`, 'neg' = `FALSE`) %>%
-  mutate(pos_perc = pos / (pos + neg)*100) %>%
-  mutate(cum_pos = cumsum(ifelse(is.na(pos), 0, pos)),
-         cum_neg = cumsum(ifelse(is.na(neg), 0, neg))) %>%
-  mutate(cum_perc = cum_pos/(cum_pos+cum_neg)*100) %>%
-  rename('visit'='folderName') %>%
-  select(visit, neg, pos, pos_perc, cum_perc) %>%
-  kable() %>%
-  kable_styling()
+# LN_pos <-  LN_ISNRPS %>% full_join(LN_WHO) %>%
+#   mutate(LN_pos = ISNRPS_pos | WHO_pos) %>%
+#   select(-ISNRPS_pos, -WHO_pos) %>%
+#   mutate(folderName = as.factor(folderName)) %>%
+#   mutate(folderName = fct_relevel(folderName, 'Baseline','3 month','6 month',
+#                                   '12 month','18 month','24 month','30 month','36 month'))
+# LN_pos %>%
+#   count(folderName, LN_pos) %>%
+#   spread(LN_pos, n) %>%
+#   rename('pos' = `TRUE`, 'neg' = `FALSE`) %>%
+#   mutate(pos_perc = pos / (pos + neg)*100) %>%
+#   mutate(cum_pos = cumsum(ifelse(is.na(pos), 0, pos)),
+#          cum_neg = cumsum(ifelse(is.na(neg), 0, neg))) %>%
+#   mutate(cum_perc = cum_pos/(cum_pos+cum_neg)*100) %>%
+#   rename('visit'='folderName') %>%
+#   select(visit, neg, pos, pos_perc, cum_perc) %>%
+#   kable() %>%
+#   kable_styling()
 biopsy %>%
+  filter(LN==1) %>%
+  mutate(time_to_pos_biopsy = ifelse(time_to_pos_biopsy==-1, 0,
+                                     time_to_pos_biopsy)) %>%
   mutate(time_to_pos_biopsy = factor(time_to_pos_biopsy),
          time_to_pos_biopsy = fct_other(time_to_pos_biopsy,
                                         keep = as.character(-1:2),
                                         other_level = '3+')) %>%
   tabyl(time_to_pos_biopsy) %>%
+  mutate(`Cumulative percent` = cumsum(percent)) %>%
   rename('Years' = time_to_pos_biopsy) %>%
   adorn_pct_formatting() %>%
   adorn_totals() %>%
   kable(caption = 'Time from diagnosis to positive biopsy') %>%
   kable_styling(full_width=FALSE)
 
+visits <- vroom(here('data/raw/vis_data_2020-01-31_1545.csv'),
+                col_select = c('subjectId','startDate','folderName','VISITDTC_YYYY'),
+                .name_repair = 'universal') %>%
+  clean_names()
+timelines <- visits %>%
+  group_by(subject_id) %>%
+  summarize(start_date = unique(start_date), end_date = max(visitdtc_yyyy, na.rm=T))
+timelines <- timelines %>%
+  left_join(biopsy %>% select(subject_id, biopsdtc, LN, dxdt)) %>%
+  mutate(last_date = pmin(end_date, biopsdtc, na.rm=T),
+         LN = ifelse(is.na(LN), 0, LN)) %>%
+  mutate(time_to_LN = last_date - dxdt) %>%
+  filter(time_to_LN >= 0)
+
+s1 <- survival::survfit(survival::Surv(time_to_LN, LN)~1, data=timelines)
+survminer::ggsurvplot(s1, risk.table = FALSE, conf.int = TRUE,
+                      fun = 'event',
+                      palette = 'lancet',
+                      legend='none',
+                      xlab='Time since diagnosis (years)',
+                      ylab = "Probabilty of developing lupus nephritis")
+
+#' > In this analysis there were 4 individuals who had a negative time
+#' > between diagnosis and LN biopsy. I changed that time to 0, assuming
+#' > that we're dealing with rounding error
 
 # Principle 3 -------------------------------------------------------------
 #' ## Principle 3: Membranous (class V) LN more often presents with nephrotic syndrome than proliferative LN (class III or IV)
@@ -327,6 +358,7 @@ prin4 <- prin4 %>%
   ungroup() %>%
   filter(!is.na(first_ln))
 
+all_rows <- vroom(here('data/raw/all_rows_data_2020-01-31_1545.csv'))
 LN_classes <- map(2:5, compute_classes) %>%
   Reduce(left_join, .)
 
@@ -357,6 +389,13 @@ prin4 %>% count(subject_id) %>% tabyl(n) %>%
         digits=2) %>%
   kable_styling(full_width = F)
 
+#' > The information available for subject 597 showed that diagnosis
+#' > was at an unscheduled visit, and where that visit was temporally
+#' > between baseline, 6 month and 12 month visit was not available. So
+#' > this subject was removed from the analysis since the number of
+#' > visits post diagnosis could not be definitively computed for
+#' > that subject.
+#'
 #' ### GFR changes
 #'
 #+ gfr_change_black
@@ -524,12 +563,6 @@ prin4 %>%
   kable(caption = 'Frequency distribution for ESRD', digits=2)%>%
   kable_styling(full_width = F)
 
-#' > The information available for subject 597 showed that diagnosis
-#' > was at an unscheduled visit, and where that visit was temporally
-#' > between baseline, 6 month and 12 month visit was not available. So
-#' > this subject was removed from the analysis since the number of
-#' > visits post diagnosis could not be definitively computed for
-#' > that subject.
 
 
 #' ## Principle 5: Short term renal outcomes are worse in patients who present with GFR < 60mL/min/1.73 m2 and/or nephrotic-range proteinuria (> 1 protein/creatinine ratio)

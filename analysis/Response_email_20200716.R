@@ -4,17 +4,18 @@
 #' date: "`r format(Sys.time(), '%B %d, %Y %I:%m %p')`"
 #' output:
 #'   html_document:
-#'     toc: true
+#'     toc: false
 #'     toc_depth: 3
 #'     toc_float:
 #'       collapsed: true
 #'       smooth_scroll: false
-#'     theme: sandstone
+#'     theme: cosmo
 #'     highlight: zenburn
-#'     code_folding: hide
+#'     css: style.css
+#'
 #' ---
 #'
-#+ preamble, echo=T, results='hide', message=F, warning=F
+#+ preamble, include=FALSE
 # Preamble ----------------------------------------------------------------
 library(pacman)
 p_load(char = c('readxl','tidyverse','data.table','glue','fs','here',
@@ -22,7 +23,7 @@ p_load(char = c('readxl','tidyverse','data.table','glue','fs','here',
 source(here('lib/R/pval_scientific.R'))
 
 
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE,
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE,
                       cache = F)
 # all_subjects <- vroom(here('data/raw/all_rows_data_2020-01-31_1545.csv'),
 #                       col_select = c(subjectId, visit = folderName, eventIndex)) %>%
@@ -54,12 +55,18 @@ data_dict <- read_excel(here('background/f-6-337-13136911_ZH2vHUc6_111319_CARRA_
 
 # Table one ---------------------------------------------------------------
 
-## Could you provide us with a demographics breakdown so we can do a table 1 with
-# Age at enrollment
-# Gender
-# Ethnicity
-# Time since diagnosis
-
+#' ### Demographic summary
+#'
+#' ::: {.query}
+#' Could you provide us with a demographics breakdown so we can do a table 1 with
+#'
+#' + Age at enrollment
+#' + Gender
+#' + Ethnicity
+#' + Time since diagnosis
+#'
+#' :::
+#+
 age <- vroom(here('data/raw/visit.list_data_2020-01-31_1545.csv')) %>%
   clean_names() %>%
   select(subject_id, event_type, visage) %>%
@@ -82,7 +89,7 @@ races <- dat %>%
 
 races[races$mixed==1, select(races, white:othrace) %>% names()] = 0
 
-races %>%
+races_tab <- races %>%
   pivot_longer(cols = -subject_id,
                names_to = 'race', values_to = 'indic') %>%
   filter(indic != 0) %>%
@@ -142,3 +149,57 @@ units(dat1$time_since_dx) = 'years'
 units(dat1$visage) = 'years'
 
 table1::table1(~ visage + sex + race + hispanic + time_since_dx, data=dat1)
+
+#' ### LN cases
+#'
+#' ::: {.query}
+#'  The total number of LN cases were reported as 234 and 235 different places throughout the data. Could you help clarify this?
+#' :::
+#'
+#' From the raw biopsy data we have the following table:
+#+
+raw_biopsy <- readRDS(here('data/rda/biopsy_classes.rds'))
+LN_subjects <- raw_biopsy %>%
+  group_by(subject_id) %>%
+  summarize(LN_ind = any(LN==1, na.rm=T))
+tabyl(LN_subjects, LN_ind) %>%
+  adorn_pct_formatting() %>%
+  adorn_totals() %>%
+  rename('LN Status' = LN_ind) %>%
+  kable() %>%
+  kable_styling(full_width = FALSE)
+
+
+# Discrepancy in N --------------------------------------------------------
+#' In the table for Principle 4 you are seeing 234 patients with LN. This is because
+#' for that analysis we were looking at number of visits after LN diagnosis. The
+#' information available for subject 597 showed that diagnosis was at an unscheduled
+#' visit, and where that visit was temporally between baseline, 6 month and 12 month visit was not available. So this subject was removed from that analysis since the
+#' number of visits post diagnosis could not be computed for that subject.
+#'
+#' This has now been noted in the original report
+#'
+
+# Principle 2 table -------------------------------------------------------
+#' ###  Principle 2 issue
+#'
+#' ::: {.query}
+#' For principle 2,  the total of LN is 217 instead of 235. I think this wasn’t updated when we added in the rest of the nephritis patients (class I and II) to principle 1
+#' :::
+#'
+#' This wasn't quite the problem. I had truncated the table to 2 or fewer years, and
+#' so several individuals were omitted from this table. It has now been fixed in the original report (summaries.html, attached)
+#'
+
+# kaplan meier ------------------------------------------------------------
+
+
+#' ### Kaplan Meier
+#'
+#' ::: {.query}
+#' For principle 2, can we do a kaplan meyer curve for time to nephritis?
+#' :::
+#'
+#' Yes, I can, though it will be a bit choppy due to the fact that we only have
+#' years since diagnosis, and not more granular data. Added to summaries.html
+#'

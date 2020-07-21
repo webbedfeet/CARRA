@@ -2,3 +2,12 @@ blockquote{
   font-size: 9pt;
   background-color: wheat;
 }
+
+h2 {
+  font-size: 14pt;
+}
+
+.query{
+  font-style: italic;
+  font-weight: bold;
+}
