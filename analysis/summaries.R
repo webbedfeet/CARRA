@@ -172,6 +172,7 @@ biopsy %>%
   rename('Years' = time_to_pos_biopsy) %>%
   adorn_pct_formatting() %>%
   adorn_totals() %>%
+  mutate(across(3:4, ~str_remove(.x, '-'))) %>%
   kable(caption = 'Time from diagnosis to positive biopsy') %>%
   kable_styling(full_width=FALSE)
 
