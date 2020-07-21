@@ -10,4 +10,7 @@ h2 {
 .query{
   font-style: italic;
   font-weight: bold;
+  background-color: lightblue;
+  border-style: outset;
+padding-left: 20px;
 }

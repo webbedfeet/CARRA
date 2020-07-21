@@ -13,6 +13,7 @@
 #'     theme: sandstone
 #'     highlight: zenburn
 #'     code_folding: hide
+#'     self_contained: true
 #' ---
 #'
 #+ preamble, echo=T, results='hide', message=F, warning=F
@@ -244,6 +245,110 @@ survminer::ggsurvplot(s1, risk.table = FALSE, conf.int = TRUE,
 #' These two issues preclude us from looking at nephrotic syndrome as an outcome for any
 #' analysis.
 #'
+#' ### UPC analysis based on available data
+#'
+#' > In the following analysis, we took data from the first visit
+#' > where LN was confirmed, which may be the baseline visit.
+#' >
+#' > There were 8 individuals who had different results in 2 biopsies;
+#' > they were III/IV only in one and V only in another. I have placed
+#' > them in the III/IV + V category
+urine <- vroom(here('data/raw/urine_data_2020-01-31_1545.csv'))
+urine <- urine %>%
+  select(subjectId, visit = folderName, DIPSTICK, PROT30, URINRATO, RATIOUNT, SPOTURIN) %>%
+  clean_names()
+
+raw_biopsy <- readRDS(here('data/rda/biopsy_classes.rds')) %>%
+  select(subject_id, visit, LN, LN34, LN345, LN50)
+LN_subjects <- raw_biopsy %>%
+  group_by(subject_id) %>%
+  summarize(LN_ind = any(LN==1, na.rm=T)) %>%
+  filter(LN_ind)
+d <- urine %>% select(subject_id, visit, urinrato, ratiount, spoturin) %>%
+  right_join(raw_biopsy) %>% semi_join(LN_subjects) %>%
+  mutate(spoturin = ifelse(spoturin=='Not Done', NA, spoturin))
+
+d <- d %>%
+  mutate(visit_no = as.numeric(str_remove(visit, ' month'))) %>%
+  mutate(visit_no = ifelse(visit=='Baseline', 0, visit_no),
+         visit_no = ifelse(visit=='Unsch', 100, visit_no)) %>%
+  mutate(visit = fct_reorder(visit, visit_no))
+
+d1 <- d %>% filter(LN==1) %>%
+  group_by(subject_id) %>%
+  filter(visit_no == min(visit_no)) %>%
+  mutate(across(LN34:LN50, ~ifelse(any(.x==1),1,0))) %>%
+  ungroup() %>%
+  distinct() %>%
+  mutate(LN345 = ifelse(LN34==1 & LN50==1, 1, LN345),
+         LN34 = ifelse(LN345==1, 0, LN34),
+         LN50 = ifelse(LN345==1, 0, LN50),
+         Other = ifelse(LN34==0 & LN345==0 & LN50==0, 1, 0))
+
+d2 <- d1 %>%
+  pivot_longer(
+    cols = c(LN34:LN50, Other),
+    names_to = 'LN_class',
+    values_to = 'indic') %>%
+  filter(indic==1)
+
+#' #### Discrete UPC outcome
+
+d2 %>%
+  mutate(LN_class = factor(LN_class),
+         LN_class = fct_recode(LN_class,
+                               'Class III/IV only'='LN34',
+                               'Class III/IV + V'='LN345' ,
+                               'Class V only'='LN50' )) %>%
+  rename('UPC in last 30 days' = spoturin) %>%
+  table1::table1(~`UPC in last 30 days` | LN_class, data=.)
+
+#' ##### Testing
+#' If we take only the available data, we can do a bit of statistical testing.
+
+out2 <- tabyl(d2 %>%
+                rename('LN class' = 'LN_class',
+                       'UPC in last 30 days' = spoturin)
+              , `LN class`, `UPC in last 30 days`, show_na=FALSE)
+out2 %>%   adorn_percentages() %>%
+  adorn_totals('col') %>%
+  adorn_pct_formatting() %>%
+  adorn_ns() %>%
+  mutate(`LN class` = factor(`LN class`),
+         `LN class` = fct_recode(`LN class`,
+                                 'Class III/IV only'='LN34',
+                                 'Class III/IV + V'='LN345' ,
+                                 'Class V only'='LN50' )) %>%
+  mutate(Test = c("Fisher's test",
+                  paste('P-value =',round(fisher.test(out2)$p.value,2)),
+                  '','')) %>%
+  adorn_title() %>%
+  kable(caption = 'Frequency distribution of UPC (discrete) by LN class using available data') %>%
+  row_spec(1, bold=TRUE) %>%
+  kable_styling()
+
+#' #### Continuous UPC outcome
+
+d2 %>%
+  mutate(LN_class = factor(LN_class),
+         LN_class = fct_recode(LN_class,
+                               'Class III/IV only'='LN34',
+                               'Class III/IV + V'='LN345' ,
+                               'Class V only'='LN50' )) %>%
+  rename('LN class' = 'LN_class',
+         'UPC ratio' = urinrato) %>%
+  table1::table1(~`UPC ratio` | `LN class`, data=.)
+
+
+d2_anova = d2 %>% filter(LN_class != 'Other') %>%
+  rename('LN class' = LN_class) %>%
+  lm(urinrato ~ `LN class`, data=.) %>% broom::glance()
+#' We can also perform an ANOVA analysis using available data to see whether
+#' there are any differences in UPC ratio betwen the LN classes III/IV, III/IV + V,
+#' and V only. This gives a p-value of `r round(d2_anova$p.value,2)`.
+#'
+
+
 #' ### Frequency distribution of LN classes
 #'
 #' As a descriptive analysis, we present the frequency distribution
@@ -357,6 +462,8 @@ prin4 <- prin4 %>%
   fill(first_ln, .direction='down') %>%
   ungroup() %>%
   filter(!is.na(first_ln))
+
+saveRDS(prin4, here('data/rda/prin4.rds'))
 
 all_rows <- vroom(here('data/raw/all_rows_data_2020-01-31_1545.csv'))
 LN_classes <- map(2:5, compute_classes) %>%
@@ -487,10 +594,10 @@ tb <- prin4 %>% group_by(subject_id) %>%
   filter(event_index==min(event_index)) %>% tabyl(remission)
 
 #' At diagnosis, this can be assessed for `r sum(tb$n[1:2])` patients, which is
-#' `r 100*sum(tb$percent[1:2])`% of all
+#' `r round(100*sum(tb$percent[1:2]),2)`% of all
 #' patients. Of those for whom remission state is observed,
 #' `r tb$n[2]` or
-#' `r 100*tb$valid_percent[2]`%
+#' `r round(100*tb$valid_percent[2],2)`%
 #' entered the study in the remission state. Separating between blacks and non-blacks:
 
 prin4 %>% mutate(black = ifelse(black==1, 'Yes','No')) %>%
@@ -514,7 +621,7 @@ remission_id <- prin4 %>%
   ungroup() %>%
   pull(subject_id)
 
-#' Of these individuals, `r 100*(prin4 %>% filter(subject_id %in% remission_id) %>% count(subject_id) %>% summarize(mean(n>1)) %>% pull())`%
+#' Of these individuals, `r round(100*(prin4 %>% filter(subject_id %in% remission_id) %>% count(subject_id) %>% summarize(mean(n>1)) %>% pull()),2)`%
 #' have at least one subsequent visit. We'll investigate these subjects for subsequent remission. The following
 #' table shows the frequency distribution of individuals who subsequently got to remission state at some point for blacks and
 #' non-blacks.
@@ -564,7 +671,6 @@ prin4 %>%
   kable_styling(full_width = F)
 
 
-
 #' ## Principle 5: Short term renal outcomes are worse in patients who present with GFR < 60mL/min/1.73 m2 and/or nephrotic-range proteinuria (> 1 protein/creatinine ratio)
 # Principle 5 -------------------------------------------------------------
 
@@ -598,11 +704,11 @@ prin4 %>%
   filter(!is.na(gfr_class)) %>%
   arrange(subject_id,event_index) %>%
   group_by(subject_id) %>%
+  filter(event_index==min(event_index)|event_index==max(event_index)) %>%
   mutate(first_visit = visit[event_index == min(event_index)],
          last_visit = visit[event_index==max(event_index)],
          egfr_visit = ifelse(event_index == min(event_index), 'First','Last'),
          black = ifelse(black==1, 'Black','Non-black')) %>%
-  filter(event_index==min(event_index)|event_index==max(event_index)) %>%
   ungroup() %>%
   select(subject_id, black, first_visit, last_visit,
          egfr_visit, gfr_class) %>%
@@ -618,6 +724,20 @@ tabyl(dat=tmp, First, Last) %>% adorn_percentages('row') %>%
 
 #' So, no one starting in Stage 2 or 3 gets worse, while 4% of people
 #' starting in Stage 1 do get worse.
+#'
+#' **A bit of statistics**
+
+tmp1 <- tmp %>%
+  mutate(across(First:Last, as.factor)) %>%
+  mutate(across(First:Last, ~fct_recode(.x, 'Stage 2' = 'Stage 3'))) %>%
+  mutate(across(First:Last, ~fct_recode(.x, 'Stage 2+3' = 'Stage 2')))
+
+tmp1_tbl <- tabyl(tmp1, First, Last)
+tmp1_tbl %>%
+  adorn_percentages() %>%
+    adorn_pct_formatting() %>%
+  adorn_ns()
+
 #'
 #' ### Remission
 
@@ -771,14 +891,20 @@ rtx_gfr %>%
 
 options(opts)
 
-#+ rtx_gfr_plot, fig.width=4, fig.height=4
-ggplot(rtx_gfr, aes(x = Rituximab, y = eGFR))+geom_violin()+
+#+ rtx_gfr_plot, fig.width=7
+ggplot(rtx_gfr, aes(x = Rituximab, y = eGFR))+
+  geom_violin(draw_quantiles = 0.5)+
   ggpubr::stat_compare_means(method='wilcox.test',
                              label.x.npc = 0.8)+
   scale_y_log10() +
   theme_classic() +
   labs(x = 'Rituximab use', y = 'eGFR')+
   ggtitle('Distribution of eGFR by Rituximab use among LN patients')
+
+#' > The violin plots have the medians marked. Hypothesis testing to test if the
+#' > change in eGFR was the same in the two groups was performed using a
+#' > Wilcoxon rank-sum test, with the two-sided alternative.
+
 #'
 #'### Rituximab and concurrent medications
 #'
@@ -797,42 +923,60 @@ tab_rtx_med <- LN_classes %>% left_join(ritux) %>% left_join(meds) %>%
   tabyl(medication, ritux)
 o <- order(tab_rtx_med$Yes)
 
-out_rtx_med <- tab_rtx_med %>%
-  adorn_percentages('col') %>%
-  adorn_pct_formatting() %>%
-  adorn_ns() %>%
-  slice(rev(o))
+n_ritux = nrow(ritux)
+n_noritux = nrow(LN_classes) - nrow(ritux)
 
+library(glue)
 tab_rtx_med %>%
-  adorn_percentages('col') %>%
-  adorn_pct_formatting() %>%
-  adorn_ns() %>%
-  slice(rev(o)) %>%
-  slice(1:10) %>%
+  mutate(perc_yes = Yes/n_ritux*100,
+         perc_no = No/n_noritux*100,
+         out_yes = glue("{round(perc_yes,2)}% ({Yes})"),
+         out_no = glue("{round(perc_no,2)}% ({No})")) %>%
+  slice_max(perc_yes, n = 10) %>%
+  select(medication, out_no, out_yes) %>%
+  set_names(c('Medication',glue('No Ritux (N = {n_noritux})'),
+              glue('With Ritux (N = {n_ritux})'))) %>%
   kable(caption = 'Top 10 drugs among RTX users and
         corresponding proportions among non-RTX patients') %>%
   kable_styling()
 
-out_rtx_med_diff <- tab_rtx_med %>%
-  adorn_percentages('col') %>%
-  mutate(pct_diff = Yes - No) %>%
-  arrange(-abs(pct_diff)) %>%
-  adorn_pct_formatting() %>%
-  rename(Difference = pct_diff)
 
-tab_rtx_med %>%
-  adorn_percentages('col') %>%
-  mutate(pct_diff = Yes - No) %>%
-  arrange(-abs(pct_diff)) %>%
-  adorn_pct_formatting() %>%
+# out_rtx_med <- tab_rtx_med %>%
+#   adorn_percentages('col') %>%
+#   adorn_pct_formatting() %>%
+#   adorn_ns() %>%
+#   slice(rev(o))
+#
+# tab_rtx_med %>%
+#   adorn_percentages('col') %>%
+#   adorn_pct_formatting() %>%
+#   adorn_ns() %>%
+#   slice(rev(o)) %>%
+#   slice(1:10) %>%
+#   kable(caption = 'Top 10 drugs among RTX users and
+#         corresponding proportions among non-RTX patients') %>%
+#   kable_styling()
+
+tab_rtx_med  %>%
+  mutate(perc_yes = Yes/n_ritux*100,
+         perc_no = No/n_noritux*100) %>%
+    mutate(pct_diff = perc_yes - perc_no) %>%
+  slice_max(abs(pct_diff), n=10) %>%
   rename(Difference = pct_diff) %>%
-  head(10) %>%
-  kable(caption = 'Top 10 drugs in difference of usage between RTX and non-RTX') %>%
+  # select(medication, perc_no, perc_yes, Difference) %>%
+  mutate(across(perc_yes:Difference, ~paste0(round(.x,2),'%'))) %>%
+  mutate(perc_no = glue("{perc_no} ({No})"),
+         perc_yes = glue('{perc_yes} ({Yes})')) %>%
+  select(medication, perc_no, perc_yes, Difference) %>%
+  kable(caption = 'Top 10 drugs in difference of usage between RTX and non-RTX',
+        col.names = c('Medication',glue('No Ritux (N = {n_noritux})'),
+                      glue('With Ritux (N = {n_ritux})'),
+                      'Difference')) %>%
   kable_styling()
 
-openxlsx::write.xlsx(list('Medications' = out_rtx_med,
-                          'Differences' = out_rtx_med_diff),
-                    file = here('data/raw/rtx_meds.xlsx'))
+# openxlsx::write.xlsx(list('Medications' = out_rtx_med,
+#                           'Differences' = out_rtx_med_diff),
+#                     file = here('data/raw/rtx_meds.xlsx'))
 #'
 #'
 #' ## Session information

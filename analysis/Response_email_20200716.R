@@ -54,8 +54,6 @@ data_dict <- read_excel(here('background/f-6-337-13136911_ZH2vHUc6_111319_CARRA_
 
 
 # Table one ---------------------------------------------------------------
-
-#' ### Demographic summary
 #'
 #' ::: {.query}
 #' Could you provide us with a demographics breakdown so we can do a table 1 with
@@ -150,7 +148,7 @@ units(dat1$visage) = 'years'
 
 table1::table1(~ visage + sex + race + hispanic + time_since_dx, data=dat1)
 
-#' ### LN cases
+#' ##
 #'
 #' ::: {.query}
 #'  The total number of LN cases were reported as 234 and 235 different places throughout the data. Could you help clarify this?
@@ -181,8 +179,6 @@ tabyl(LN_subjects, LN_ind) %>%
 #'
 
 # Principle 2 table -------------------------------------------------------
-#' ###  Principle 2 issue
-#'
 #' ::: {.query}
 #' For principle 2,  the total of LN is 217 instead of 235. I think this wasn’t updated when we added in the rest of the nephritis patients (class I and II) to principle 1
 #' :::
@@ -194,8 +190,6 @@ tabyl(LN_subjects, LN_ind) %>%
 # kaplan meier ------------------------------------------------------------
 
 
-#' ### Kaplan Meier
-#'
 #' ::: {.query}
 #' For principle 2, can we do a kaplan meyer curve for time to nephritis?
 #' :::
@@ -203,3 +197,80 @@ tabyl(LN_subjects, LN_ind) %>%
 #' Yes, I can, though it will be a bit choppy due to the fact that we only have
 #' years since diagnosis, and not more granular data. Added to summaries.html
 #'
+
+#' ### UPC information
+#'
+#' ::: {.query}
+#' For principle 3, can you please report the UPC by class both the numerical and categorical variable? I know the data is limited but we’d like to report what we have
+#' :::
+#'
+#' This analysis has been added to Principle 3 in summary.html
+#'
+#' ::: {.query}
+#' For principle 4, the GFR table total is 234 not 235 including NA. Where did the one patient go?
+#' :::
+#'
+#' This has been answered above
+#'
+#' ::: {.query}
+#' For principle 5, what is the p-value for the change in GFR? Can we do this by collapsing state 2 and state 3 into one group and compare GFR >60 vs <60?
+#' :::
+#'
+#' This is an ill-posed problem. What is the hypothesis test you're asking for? If
+#' you're testing H~0~: *No difference between Stage 1 and Stage 2+3 in what proportion get worse* vs H~1~: *Stage 2+3 gets worse more often than Stage 1*,
+#' which is how I interpret the principle, then
+#' you have a problem. People starting in Stage 2+3 cannot get worse.
+#'
+#' You could consider if eGFR values worsen on average for non-Stage 1 patients
+#' compared to Stage 1 patients.
+#'
+prin4 <- readRDS(here('data/rda/prin4.rds'))
+
+gfr_id <- prin4 %>%
+  filter(!is.na(gfr_class)) %>%
+  count(subject_id) %>%
+  filter(n>1) %>%
+  pull(subject_id)
+
+prin4 %>%
+  filter(subject_id %in% gfr_id) %>%
+  filter(!is.na(gfr_class)) %>%
+  arrange(subject_id,event_index) %>%
+  group_by(subject_id) %>%
+  filter(event_index==min(event_index)|event_index==max(event_index)) %>%
+  mutate(first_visit = visit[event_index == min(event_index)],
+         last_visit = visit[event_index==max(event_index)],
+         egfr_visit = ifelse(event_index == min(event_index), 'First','Last'),
+         black = ifelse(black==1, 'Black','Non-black')) %>%
+  ungroup() %>%
+  select(subject_id, black, first_visit, last_visit,
+         egfr_visit,eGFR) %>%
+  spread(egfr_visit, eGFR) %>%
+  mutate(gfr_change = Last-First) %>%
+  mutate(first_stage2 = ifelse(First <= 60, 'Stage 2+','Stage 1'))-> tmp
+
+ggplot(tmp, aes(x = first_stage2, gfr_change))+
+  geom_violin(draw_quantiles = 0.5)+
+  ggpubr::stat_compare_means(method='wilcox.test',
+                             method.args = list(alternative = 'less'),
+                             label.x = 0.5)+
+  theme_minimal()+
+  labs(x = 'Stage at first visit',
+       y = 'eGFR change between first and last visit')
+
+#' This plot clearly shows that individuals who start at Stage 2+ (eGFR <= 60)
+#' have strong **improvement** by their last visit.
+#'
+#' > The violin plots have the medians marked. Hypothesis testing to test if the
+#' > change in eGFR was the same in the two groups was performed using a
+#' > Wilcoxon rank-sum test, with the alternative hypothesis being that median eGFR
+#' > among Stage 2 subjects is **less than** median eGFR among Stage 1 subjects.
+#'
+#' ::: {.query}
+#' For principle 6, for the top medications- which patients are being compared? What is the denominator?
+#' :::
+#'
+#' Thanks for bringing this up. It looks like I didn't quite do the right thing
+#' before (hence your confusion). I've updated the tables in summary.html. Denominators for each entity
+#' is the number of Ritux users or non-Ritux subjects as the case might be for each
+#' column. This is what makes sense to me. So the interpretation of the *With Ritux* entries is the proportion of Ritux users who also took the drug in quesiton.
