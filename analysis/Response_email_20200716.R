@@ -251,6 +251,7 @@ prin4 %>%
   mutate(gfr_change = Last-First) %>%
   mutate(first_stage2 = ifelse(First <= 60, 'Stage 2+','Stage 1'))-> tmp
 
+#+ eval=FALSE
 ggplot(tmp, aes(x = first_stage2, gfr_change))+
   geom_violin(draw_quantiles = 0.5)+
   ggpubr::stat_compare_means(method='wilcox.test',
@@ -260,14 +261,35 @@ ggplot(tmp, aes(x = first_stage2, gfr_change))+
   labs(x = 'Stage at first visit',
        y = 'eGFR change between first and last visit')
 
-#' This plot clearly shows that individuals who start at Stage 2+ (eGFR <= 60)
-#' have strong **improvement** by their last visit.
-#'
-#' > The violin plots have the medians marked. Hypothesis testing to test if the
-#' > change in eGFR was the same in the two groups was performed using a
-#' > Wilcoxon rank-sum test, with the alternative hypothesis being that median eGFR
-#' > among Stage 2 subjects is **less than** median eGFR among Stage 1 subjects.
-#'
+# This plot clearly shows that individuals who start at Stage 2+ (eGFR <= 60)
+# have strong **improvement** by their last visit.
+#
+# > The violin plots have the medians marked. Hypothesis testing to test if the
+# > change in eGFR was the same in the two groups was performed using a
+# > Wilcoxon rank-sum test, with the alternative hypothesis being that median eGFR
+# > among Stage 2 subjects is **less than** median eGFR among Stage 1 subjects.
+#
+#+ eval=TRUE
+tmp2 <- tmp %>% gather(visit, value, First, Last)
+tmp2 <- tmp2 %>%
+  mutate(visit = factor(paste(visit, 'visit'))) %>%
+  mutate(x_pos = as.numeric(visit) + runif(nrow(.),-0.1, 0.1))
+
+
+ggplot(tmp2, aes(x = x_pos, y = value, color = first_stage2))+
+  geom_line(aes(group = subject_id), alpha = 0.2, size=0.7)+
+  geom_point(shape=15, stroke=1) +
+  geom_hline(yintercept = 60, linetype=2, alpha = 0.5)+
+  scale_x_continuous('', breaks = c(1,2), labels = c('First visit','Last visit'))+
+  scale_y_continuous(bquote('eGFR level (mL / min / 1.73'~m^2~')'),
+                     breaks = c(0,60,100, 200, 300))+
+  coord_cartesian(xlim = c(0.5,2.5))+
+  labs(color = 'First visit stage')+
+  theme_minimal()+
+  theme(panel.grid.major.x = element_blank(),
+        axis.text.x = element_text(face='bold', size=12))+
+  ggsci::scale_color_npg()
+
 #' ::: {.query}
 #' For principle 6, for the top medications- which patients are being compared? What is the denominator?
 #' :::

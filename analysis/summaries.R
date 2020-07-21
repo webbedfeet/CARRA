@@ -189,6 +189,18 @@ timelines <- timelines %>%
   mutate(time_to_LN = last_date - dxdt) %>%
   filter(time_to_LN >= 0)
 
+
+s2 <- survival::survfit(survival::Surv(time_to_LN, LN)~1,
+                        data=timelines %>% filter(LN==1))
+survminer::ggsurvplot(s2, risk.table = FALSE, conf.int = TRUE,
+                      fun = 'event',
+                      palette = 'lancet',
+                      legend='none',
+                      xlab='Time since diagnosis (years)',
+                      ylab = "Probabilty of developing lupus nephritis")
+#'
+#' The following also shows the Kaplan-Meier curve for all subjects, with regard to LN incidence.
+#'
 s1 <- survival::survfit(survival::Surv(time_to_LN, LN)~1, data=timelines)
 survminer::ggsurvplot(s1, risk.table = FALSE, conf.int = TRUE,
                       fun = 'event',
@@ -196,6 +208,7 @@ survminer::ggsurvplot(s1, risk.table = FALSE, conf.int = TRUE,
                       legend='none',
                       xlab='Time since diagnosis (years)',
                       ylab = "Probabilty of developing lupus nephritis")
+
 
 #' > In this analysis there were 4 individuals who had a negative time
 #' > between diagnosis and LN biopsy. I changed that time to 0, assuming
