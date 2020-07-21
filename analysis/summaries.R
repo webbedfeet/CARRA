@@ -158,12 +158,18 @@ LN_pos %>%
   select(visit, neg, pos, pos_perc, cum_perc) %>%
   kable() %>%
   kable_styling()
-biopsy %>% count(time_to_pos_biopsy) %>% mutate(prob = 100*cumsum(n)/sum(n)) %>%
-  filter(time_to_pos_biopsy <=2) %>%
-  kable(col.names = c('Years', 'N', 'Cumulative probability'),
-        caption = 'Time from diagnosis to positive biopsy',
-        digits=2) %>%
-  kable_styling(full_width = F)
+biopsy %>%
+  mutate(time_to_pos_biopsy = factor(time_to_pos_biopsy),
+         time_to_pos_biopsy = fct_other(time_to_pos_biopsy,
+                                        keep = as.character(-1:2),
+                                        other_level = '3+')) %>%
+  tabyl(time_to_pos_biopsy) %>%
+  rename('Years' = time_to_pos_biopsy) %>%
+  adorn_pct_formatting() %>%
+  adorn_totals() %>%
+  kable(caption = 'Time from diagnosis to positive biopsy') %>%
+  kable_styling(full_width=FALSE)
+
 
 # Principle 3 -------------------------------------------------------------
 #' ## Principle 3: Membranous (class V) LN more often presents with nephrotic syndrome than proliferative LN (class III or IV)
