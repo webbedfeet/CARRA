@@ -4,7 +4,7 @@ author: "Abhijit Dasgupta, PhD"
 date: "`r format(Sys.Date(), '%B %d, %Y')`"
 output: 
   html_document:
-    theme: sandstone
+    theme: yeti
     highlight: zenburn
  
 ---

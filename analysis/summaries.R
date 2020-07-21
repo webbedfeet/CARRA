@@ -7,8 +7,8 @@
 #'     css: style.css
 #'     toc: true
 #'     toc_depth: 3
-#'     toc_float: false
-#'     theme: sandstone
+#'     toc_float: true
+#'     theme: yeti
 #'     highlight: zenburn
 #'     self_contained: true
 #' ---

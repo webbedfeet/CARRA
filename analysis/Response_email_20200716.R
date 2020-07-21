@@ -9,7 +9,7 @@
 #'     toc_float:
 #'       collapsed: true
 #'       smooth_scroll: false
-#'     theme: cosmo
+#'     theme: yeti
 #'     highlight: zenburn
 #'     css: style.css
 #'     self_contained: true
