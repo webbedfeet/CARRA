@@ -691,6 +691,8 @@ prin4 %>%
 #' # Principle 5: Short term renal outcomes are worse in patients who present with GFR < 60mL/min/1.73 m2 and/or nephrotic-range proteinuria (> 1 protein/creatinine ratio)
 # Principle 5 -------------------------------------------------------------
 
+#+ echo = FALSE
+prin4 <- readRDS(here('data/rda/prin4.rds'))
 # We start with prin4, which only contains subjects with LN and starts
 # their time at time of diagnosis
 
@@ -767,15 +769,18 @@ tmp2 <- tmp2 %>%
 
 
 ggplot(tmp2, aes(x = x_pos, y = value, color = first_stage2))+
-  geom_line(aes(group = subject_id), alpha = 0.2, size=0.7)+
-  geom_point(shape=15, stroke=1) +
-  geom_hline(yintercept = 60, linetype=2, alpha = 0.5)+
-  scale_x_continuous('', breaks = c(1,2), labels = c('First visit','Last visit'))+
+  geom_line(aes(group = subject_id), alpha = 0.2, size=0.7,
+            show.legend = FALSE)+
+  geom_point(shape=15, stroke=1,
+             show.legend = FALSE) +
+  geom_hline(yintercept = 60, linetype=2, alpha = 0.5) +
+  facet_wrap(~first_stage2)+
+  scale_x_continuous('', breaks = c(1,2), labels = c('First visit','Last visit')) +
   scale_y_continuous(bquote('eGFR level (mL / min / 1.73'~m^2~')'),
                      breaks = c(0,60,100, 200, 300))+
-  coord_cartesian(xlim = c(0.5,2.5))+
-  labs(color = 'First visit stage')+
-  theme_minimal()+
+  coord_cartesian(xlim = c(0.5,2.5)) +
+  labs(color = 'First visit stage') +
+  theme_minimal() +
   theme(panel.grid.major.x = element_blank(),
         axis.text.x = element_text(face='bold', size=12))+
   ggsci::scale_color_npg()
