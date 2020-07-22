@@ -963,27 +963,59 @@ meds <- vroom(here('data/raw/meds_data_2020-01-31_1545.csv'),
   mutate(medication = str_to_title(medcaton)) %>%
   select(-medcaton)
 
-tab_rtx_med <- LN_classes %>% left_join(ritux) %>% left_join(meds) %>%
-  filter(!is.na(LN)) %>%
+blah <- LN_classes %>% left_join(ritux) %>% left_join(meds) %>%
+  distinct()
+blah1 <- blah %>% filter(!is.na(LN))
+
+tab_rtx_med_overall <- blah %>%
+  filter(medication != 'Rituximab (Rituxan)') %>%
+  mutate(ritux = ifelse(is.na(ritux), 'No','Yes')) %>%
+  tabyl(medication, ritux)
+n_ritux_overall <- blah %>%
+  select(subject_id, ritux) %>%
+  distinct() %>%
+  mutate(ritux = ifelse(is.na(ritux),'No','Yes')) %>%
+  pull(ritux) %>%
+  table()
+
+library(glue)
+tab_rtx_med_overall %>%
+  mutate(perc_yes = Yes/n_ritux_overall['Yes']*100,
+         perc_no = No/n_ritux_overall['No']*100,
+         out_yes = glue("{round(perc_yes,2)}% ({Yes})"),
+         out_no = glue("{round(perc_no,2)}% ({No})")) %>%
+  slice_max(perc_yes, n = 10) %>%
+  select(medication, out_no, out_yes) %>%
+  set_names(c('Medication',glue('No Ritux (N = {n_ritux_overall["No"]})'),
+              glue('With Ritux (N = {n_ritux_overall["Yes"]})'))) %>%
+  kable(caption = 'Top 10 drugs among RTX users and
+        corresponding proportions among non-RTX patients') %>%
+  kable_styling()
+
+tab_rtx_med <- blah1 %>%
   filter(medication != 'Rituximab (Rituxan)') %>%
   mutate(ritux = ifelse(is.na(ritux), 'No','Yes')) %>%
   tabyl(medication, ritux)
 o <- order(tab_rtx_med$Yes)
 
-n_ritux = nrow(ritux)
-n_noritux = nrow(LN_classes) - nrow(ritux)
+n_ritux <- blah1 %>%
+  select(subject_id, ritux) %>%
+  distinct() %>%
+  mutate(ritux = ifelse(is.na(ritux),'No','Yes')) %>%
+  pull(ritux) %>%
+  table()
 
 library(glue)
 tab_rtx_med %>%
-  mutate(perc_yes = Yes/n_ritux*100,
-         perc_no = No/n_noritux*100,
+  mutate(perc_yes = Yes/n_ritux['Yes']*100,
+         perc_no = No/n_ritux['No']*100,
          out_yes = glue("{round(perc_yes,2)}% ({Yes})"),
          out_no = glue("{round(perc_no,2)}% ({No})")) %>%
   slice_max(perc_yes, n = 10) %>%
   select(medication, out_no, out_yes) %>%
-  set_names(c('Medication',glue('No Ritux (N = {n_noritux})'),
-              glue('With Ritux (N = {n_ritux})'))) %>%
-  kable(caption = 'Top 10 drugs among RTX users and
+  set_names(c('Medication',glue('No Ritux (N = {n_ritux["No"]})'),
+              glue('With Ritux (N = {n_ritux["Yes"]})'))) %>%
+  kable(caption = 'Top 10 drugs used by LN patients\n among RTX users and
         corresponding proportions among non-RTX patients') %>%
   kable_styling()
 
@@ -1004,9 +1036,11 @@ tab_rtx_med %>%
 #         corresponding proportions among non-RTX patients') %>%
 #   kable_styling()
 
+
+
 tab_rtx_med  %>%
-  mutate(perc_yes = Yes/n_ritux*100,
-         perc_no = No/n_noritux*100) %>%
+  mutate(perc_yes = Yes/n_ritux['Yes']*100,
+         perc_no = No/n_ritux['No']*100) %>%
     mutate(pct_diff = perc_yes - perc_no) %>%
   slice_max(abs(pct_diff), n=10) %>%
   rename(Difference = pct_diff) %>%
@@ -1015,9 +1049,9 @@ tab_rtx_med  %>%
   mutate(perc_no = glue("{perc_no} ({No})"),
          perc_yes = glue('{perc_yes} ({Yes})')) %>%
   select(medication, perc_no, perc_yes, Difference) %>%
-  kable(caption = 'Top 10 drugs in difference of usage between RTX and non-RTX',
-        col.names = c('Medication',glue('No Ritux (N = {n_noritux})'),
-                      glue('With Ritux (N = {n_ritux})'),
+  kable(caption = 'Top 10 drugs among LN patients in difference of usage between RTX and non-RTX',
+        col.names = c('Medication',glue('No Ritux (N = {n_ritux["No"]})'),
+                      glue('With Ritux (N = {n_ritux["Yes"]})'),
                       'Difference')) %>%
   kable_styling()
 
@@ -1025,8 +1059,10 @@ tab_rtx_med  %>%
 #                           'Differences' = out_rtx_med_diff),
 #                     file = here('data/raw/rtx_meds.xlsx'))
 #'
-#'
-#' ## Session information
+
+# Session info ------------------------------------------------------------
+
+#' # Session information
 #'
 #' This analysis was done using `r R.version$version.string` and the following packages
 #+ packages, results = 'asis', echo = FALSE
