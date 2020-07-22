@@ -1055,7 +1055,7 @@ $(document).ready(function () {
         <div id="header">
     <h1 class="title">CARRA Analysis</h1>
                 <h4 class="author">Abhijit Dasgupta, PhD</h4>
-                <h4 class="date">July 22, 2020 02:07 PM</h4>
+                <h4 class="date">July 22, 2020 03:07 PM</h4>
         </div>
     </div>
 </div>
@@ -3994,23 +3994,33 @@ Vitamin D
 <span id="cb42-15"><a href="#cb42-15"></a><span class="co">#   kable_styling()</span></span>
 <span id="cb42-16"><a href="#cb42-16"></a></span>
 <span id="cb42-17"><a href="#cb42-17"></a></span>
-<span id="cb42-18"><a href="#cb42-18"></a></span>
-<span id="cb42-19"><a href="#cb42-19"></a>tab_rtx_med  <span class="op">%&gt;%</span></span>
-<span id="cb42-20"><a href="#cb42-20"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">perc_yes =</span> Yes<span class="op">/</span>n_ritux[<span class="st">&#39;Yes&#39;</span>]<span class="op">*</span><span class="dv">100</span>,</span>
-<span id="cb42-21"><a href="#cb42-21"></a>         <span class="dt">perc_no =</span> No<span class="op">/</span>n_ritux[<span class="st">&#39;No&#39;</span>]<span class="op">*</span><span class="dv">100</span>) <span class="op">%&gt;%</span></span>
-<span id="cb42-22"><a href="#cb42-22"></a><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">pct_diff =</span> perc_yes <span class="op">-</span><span class="st"> </span>perc_no) <span class="op">%&gt;%</span></span>
-<span id="cb42-23"><a href="#cb42-23"></a><span class="st">  </span><span class="kw">slice_max</span>(<span class="kw">abs</span>(pct_diff), <span class="dt">n=</span><span class="dv">10</span>) <span class="op">%&gt;%</span></span>
-<span id="cb42-24"><a href="#cb42-24"></a><span class="st">  </span><span class="kw">rename</span>(<span class="dt">Difference =</span> pct_diff) <span class="op">%&gt;%</span></span>
-<span id="cb42-25"><a href="#cb42-25"></a><span class="st">  </span><span class="co"># select(medication, perc_no, perc_yes, Difference) %&gt;%</span></span>
-<span id="cb42-26"><a href="#cb42-26"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="kw">across</span>(perc_yes<span class="op">:</span>Difference, <span class="op">~</span><span class="kw">paste0</span>(<span class="kw">round</span>(.x,<span class="dv">2</span>),<span class="st">&#39;%&#39;</span>))) <span class="op">%&gt;%</span></span>
-<span id="cb42-27"><a href="#cb42-27"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">perc_no =</span> <span class="kw">glue</span>(<span class="st">&quot;{perc_no} ({No})&quot;</span>),</span>
-<span id="cb42-28"><a href="#cb42-28"></a>         <span class="dt">perc_yes =</span> <span class="kw">glue</span>(<span class="st">&#39;{perc_yes} ({Yes})&#39;</span>)) <span class="op">%&gt;%</span></span>
-<span id="cb42-29"><a href="#cb42-29"></a><span class="st">  </span><span class="kw">select</span>(medication, perc_no, perc_yes, Difference) <span class="op">%&gt;%</span></span>
-<span id="cb42-30"><a href="#cb42-30"></a><span class="st">  </span><span class="kw">kable</span>(<span class="dt">caption =</span> <span class="st">&#39;Top 10 drugs among LN patients in difference of usage between RTX and non-RTX&#39;</span>,</span>
-<span id="cb42-31"><a href="#cb42-31"></a>        <span class="dt">col.names =</span> <span class="kw">c</span>(<span class="st">&#39;Medication&#39;</span>,<span class="kw">glue</span>(<span class="st">&#39;No Ritux (N = {n_ritux[&quot;No&quot;]})&#39;</span>),</span>
-<span id="cb42-32"><a href="#cb42-32"></a>                      <span class="kw">glue</span>(<span class="st">&#39;With Ritux (N = {n_ritux[&quot;Yes&quot;]})&#39;</span>),</span>
-<span id="cb42-33"><a href="#cb42-33"></a>                      <span class="st">&#39;Difference&#39;</span>)) <span class="op">%&gt;%</span></span>
-<span id="cb42-34"><a href="#cb42-34"></a><span class="st">  </span><span class="kw">kable_styling</span>()</span></code></pre></div>
+<span id="cb42-18"><a href="#cb42-18"></a>d1 &lt;-<span class="st"> </span>tab_rtx_med  <span class="op">%&gt;%</span></span>
+<span id="cb42-19"><a href="#cb42-19"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">perc_yes =</span> Yes<span class="op">/</span>n_ritux[<span class="st">&#39;Yes&#39;</span>]<span class="op">*</span><span class="dv">100</span>,</span>
+<span id="cb42-20"><a href="#cb42-20"></a>         <span class="dt">perc_no =</span> No<span class="op">/</span>n_ritux[<span class="st">&#39;No&#39;</span>]<span class="op">*</span><span class="dv">100</span>) <span class="op">%&gt;%</span></span>
+<span id="cb42-21"><a href="#cb42-21"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">pct_diff =</span> perc_yes <span class="op">-</span><span class="st"> </span>perc_no) <span class="op">%&gt;%</span></span>
+<span id="cb42-22"><a href="#cb42-22"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">pval =</span> <span class="kw">map2_dbl</span>(No, Yes, <span class="op">~</span><span class="kw">prop.test</span>(<span class="kw">c</span>(.x, .y), <span class="kw">unclass</span>(n_ritux))<span class="op">$</span>p.value))</span>
+<span id="cb42-23"><a href="#cb42-23"></a></span>
+<span id="cb42-24"><a href="#cb42-24"></a></span>
+<span id="cb42-25"><a href="#cb42-25"></a></span>
+<span id="cb42-26"><a href="#cb42-26"></a><span class="co"># tab_rtx_med  %&gt;%</span></span>
+<span id="cb42-27"><a href="#cb42-27"></a><span class="co">#   mutate(perc_yes = Yes/n_ritux[&#39;Yes&#39;]*100,</span></span>
+<span id="cb42-28"><a href="#cb42-28"></a><span class="co">#          perc_no = No/n_ritux[&#39;No&#39;]*100) %&gt;%</span></span>
+<span id="cb42-29"><a href="#cb42-29"></a><span class="co">#     mutate(pct_diff = perc_yes - perc_no) %&gt;%</span></span>
+<span id="cb42-30"><a href="#cb42-30"></a><span class="co">#   slice_max(abs(pct_diff), n=10) %&gt;%</span></span>
+<span id="cb42-31"><a href="#cb42-31"></a>d1 <span class="op">%&gt;%</span></span>
+<span id="cb42-32"><a href="#cb42-32"></a><span class="st">  </span><span class="kw">slice_min</span>(pval, <span class="dt">n=</span><span class="dv">10</span>) <span class="op">%&gt;%</span></span>
+<span id="cb42-33"><a href="#cb42-33"></a><span class="st">  </span><span class="kw">rename</span>(<span class="dt">Difference =</span> pct_diff) <span class="op">%&gt;%</span></span>
+<span id="cb42-34"><a href="#cb42-34"></a><span class="st">  </span><span class="co"># select(medication, perc_no, perc_yes, Difference) %&gt;%</span></span>
+<span id="cb42-35"><a href="#cb42-35"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="kw">across</span>(perc_yes<span class="op">:</span>Difference, <span class="op">~</span><span class="kw">paste0</span>(<span class="kw">round</span>(.x,<span class="dv">2</span>),<span class="st">&#39;%&#39;</span>))) <span class="op">%&gt;%</span></span>
+<span id="cb42-36"><a href="#cb42-36"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">perc_no =</span> <span class="kw">glue</span>(<span class="st">&quot;{perc_no} ({No})&quot;</span>),</span>
+<span id="cb42-37"><a href="#cb42-37"></a>         <span class="dt">perc_yes =</span> <span class="kw">glue</span>(<span class="st">&#39;{perc_yes} ({Yes})&#39;</span>),</span>
+<span id="cb42-38"><a href="#cb42-38"></a>         <span class="dt">pval =</span> <span class="kw">format.pval</span>(pval, <span class="dt">digits=</span><span class="dv">3</span>)) <span class="op">%&gt;%</span></span>
+<span id="cb42-39"><a href="#cb42-39"></a><span class="st">  </span><span class="kw">select</span>(medication, perc_no, perc_yes, Difference, pval) <span class="op">%&gt;%</span></span>
+<span id="cb42-40"><a href="#cb42-40"></a><span class="st">  </span><span class="kw">kable</span>(<span class="dt">caption =</span> <span class="st">&#39;Top 10 drugs among LN patients in difference of usage between RTX and non-RTX&#39;</span>,</span>
+<span id="cb42-41"><a href="#cb42-41"></a>        <span class="dt">col.names =</span> <span class="kw">c</span>(<span class="st">&#39;Medication&#39;</span>,<span class="kw">glue</span>(<span class="st">&#39;No Ritux (N = {n_ritux[&quot;No&quot;]})&#39;</span>),</span>
+<span id="cb42-42"><a href="#cb42-42"></a>                      <span class="kw">glue</span>(<span class="st">&#39;With Ritux (N = {n_ritux[&quot;Yes&quot;]})&#39;</span>),</span>
+<span id="cb42-43"><a href="#cb42-43"></a>                      <span class="st">&#39;Difference&#39;</span>, <span class="st">&#39;P-value&#39;</span>)) <span class="op">%&gt;%</span></span>
+<span id="cb42-44"><a href="#cb42-44"></a><span class="st">  </span><span class="kw">kable_styling</span>()</span></code></pre></div>
 <table class="table" style="margin-left: auto; margin-right: auto;">
 <caption>
 Top 10 drugs among LN patients in difference of usage between RTX and non-RTX
@@ -4029,6 +4039,9 @@ With Ritux (N = 57)
 <th style="text-align:left;">
 Difference
 </th>
+<th style="text-align:left;">
+P-value
+</th>
 </tr>
 </thead>
 <tbody>
@@ -4045,19 +4058,8 @@ Cyclophosphamide (Cytoxan)
 <td style="text-align:left;">
 47.99%
 </td>
-</tr>
-<tr>
 <td style="text-align:left;">
-Vitamin D
-</td>
-<td style="text-align:left;">
-28.09% (50)
-</td>
-<td style="text-align:left;">
-12.28% (7)
-</td>
-<td style="text-align:left;">
--15.81%
+3.74e-12
 </td>
 </tr>
 <tr>
@@ -4073,33 +4075,8 @@ Immune Globulin (Ivig)
 <td style="text-align:left;">
 12.35%
 </td>
-</tr>
-<tr>
 <td style="text-align:left;">
-Mycophenolate Mofetil (Cellcept)
-</td>
-<td style="text-align:left;">
-75.28% (134)
-</td>
-<td style="text-align:left;">
-84.21% (48)
-</td>
-<td style="text-align:left;">
-8.93%
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-Calcium
-</td>
-<td style="text-align:left;">
-12.36% (22)
-</td>
-<td style="text-align:left;">
-3.51% (2)
-</td>
-<td style="text-align:left;">
--8.85%
+0.000499
 </td>
 </tr>
 <tr>
@@ -4115,19 +4092,8 @@ Belimumab (Benlysta)
 <td style="text-align:left;">
 8.77%
 </td>
-</tr>
-<tr>
 <td style="text-align:left;">
-Aspirin (Asa)
-</td>
-<td style="text-align:left;">
-8.43% (15)
-</td>
-<td style="text-align:left;">
-15.79% (9)
-</td>
-<td style="text-align:left;">
-7.36%
+0.000527
 </td>
 </tr>
 <tr>
@@ -4143,6 +4109,94 @@ Bactrim
 <td style="text-align:left;">
 5.26%
 </td>
+<td style="text-align:left;">
+0.016275
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Vitamin D
+</td>
+<td style="text-align:left;">
+28.09% (50)
+</td>
+<td style="text-align:left;">
+12.28% (7)
+</td>
+<td style="text-align:left;">
+-15.81%
+</td>
+<td style="text-align:left;">
+0.024706
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Hizentra
+</td>
+<td style="text-align:left;">
+0% (0)
+</td>
+<td style="text-align:left;">
+3.51% (2)
+</td>
+<td style="text-align:left;">
+3.51%
+</td>
+<td style="text-align:left;">
+0.092677
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Calcium
+</td>
+<td style="text-align:left;">
+12.36% (22)
+</td>
+<td style="text-align:left;">
+3.51% (2)
+</td>
+<td style="text-align:left;">
+-8.85%
+</td>
+<td style="text-align:left;">
+0.095075
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Aspirin (Asa)
+</td>
+<td style="text-align:left;">
+8.43% (15)
+</td>
+<td style="text-align:left;">
+15.79% (9)
+</td>
+<td style="text-align:left;">
+7.36%
+</td>
+<td style="text-align:left;">
+0.178212
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Mycophenolate Mofetil (Cellcept)
+</td>
+<td style="text-align:left;">
+75.28% (134)
+</td>
+<td style="text-align:left;">
+84.21% (48)
+</td>
+<td style="text-align:left;">
+8.93%
+</td>
+<td style="text-align:left;">
+0.221768
+</td>
 </tr>
 <tr>
 <td style="text-align:left;">
@@ -4157,19 +4211,8 @@ Tacrolimus Oral (Prograf)
 <td style="text-align:left;">
 4.84%
 </td>
-</tr>
-<tr>
 <td style="text-align:left;">
-Folic Acid
-</td>
-<td style="text-align:left;">
-6.18% (11)
-</td>
-<td style="text-align:left;">
-1.75% (1)
-</td>
-<td style="text-align:left;">
--4.43%
+0.271838
 </td>
 </tr>
 </tbody>

@@ -1037,22 +1037,32 @@ tab_rtx_med %>%
 #   kable_styling()
 
 
-
-tab_rtx_med  %>%
+d1 <- tab_rtx_med  %>%
   mutate(perc_yes = Yes/n_ritux['Yes']*100,
          perc_no = No/n_ritux['No']*100) %>%
-    mutate(pct_diff = perc_yes - perc_no) %>%
-  slice_max(abs(pct_diff), n=10) %>%
+  mutate(pct_diff = perc_yes - perc_no) %>%
+  mutate(pval = map2_dbl(No, Yes, ~prop.test(c(.x, .y), unclass(n_ritux))$p.value))
+
+
+
+# tab_rtx_med  %>%
+#   mutate(perc_yes = Yes/n_ritux['Yes']*100,
+#          perc_no = No/n_ritux['No']*100) %>%
+#     mutate(pct_diff = perc_yes - perc_no) %>%
+#   slice_max(abs(pct_diff), n=10) %>%
+d1 %>%
+  slice_min(pval, n=10) %>%
   rename(Difference = pct_diff) %>%
   # select(medication, perc_no, perc_yes, Difference) %>%
   mutate(across(perc_yes:Difference, ~paste0(round(.x,2),'%'))) %>%
   mutate(perc_no = glue("{perc_no} ({No})"),
-         perc_yes = glue('{perc_yes} ({Yes})')) %>%
-  select(medication, perc_no, perc_yes, Difference) %>%
+         perc_yes = glue('{perc_yes} ({Yes})'),
+         pval = format.pval(pval, digits=3)) %>%
+  select(medication, perc_no, perc_yes, Difference, pval) %>%
   kable(caption = 'Top 10 drugs among LN patients in difference of usage between RTX and non-RTX',
         col.names = c('Medication',glue('No Ritux (N = {n_ritux["No"]})'),
                       glue('With Ritux (N = {n_ritux["Yes"]})'),
-                      'Difference')) %>%
+                      'Difference', 'P-value')) %>%
   kable_styling()
 
 # openxlsx::write.xlsx(list('Medications' = out_rtx_med,
