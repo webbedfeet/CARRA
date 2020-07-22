@@ -297,4 +297,4 @@ ggplot(tmp2, aes(x = x_pos, y = value, color = first_stage2))+
 #' Thanks for bringing this up. It looks like I didn't quite do the right thing
 #' before (hence your confusion). I've updated the tables in summary.html. Denominators for each entity
 #' is the number of Ritux users or non-Ritux subjects as the case might be for each
-#' column. This is what makes sense to me. So the interpretation of the *With Ritux* entries is the proportion of Ritux users who also took the drug in quesiton.
+#' column. This is what makes sense to me. So the interpretation of the *With Ritux* entries is the proportion of Ritux users who also took the drug in question.
