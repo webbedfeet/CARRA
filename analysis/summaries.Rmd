@@ -1,15 +1,18 @@
 ---
-title: CARRA Analysis
-author: Abhijit Dasgupta, PhD
+title: "CARRA Analysis"
+author: "Abhijit Dasgupta, PhD"
 date: "`r format(Sys.time(), '%B %d, %Y %I:%m %p')`"
 output:
+  word_document:
+    toc: yes
+    toc_depth: '3'
   html_document:
     css: style.css
-    toc: true
+    toc: yes
     toc_depth: 3
     toc_float:
-      collapsed: true
-      smooth_scroll: false
+      collapsed: yes
+      smooth_scroll: no
     theme: sandstone
     highlight: zenburn
     code_folding: hide

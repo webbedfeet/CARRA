@@ -2,10 +2,10 @@
 title: "A question of biopsies"
 author: "Abhijit Dasgupta"
 date: "2/18/2020"
-output: 
+output:
+  word_document: default
   html_document:
     code_folding: hide
-
 ---
 
 ```{r preamble, include = F}

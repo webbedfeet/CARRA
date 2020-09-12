@@ -318,11 +318,13 @@ d2 %>%
 #' ##### Testing
 #' If we take only the available data, we can do a bit of statistical testing.
 
+
 out2 <- tabyl(d2 %>%
                 rename('LN class' = 'LN_class',
                        'UPC in last 30 days' = spoturin)
               , `LN class`, `UPC in last 30 days`, show_na=FALSE)
-out2 %>%   adorn_percentages() %>%
+out2 %>%
+  adorn_percentages() %>%
   adorn_totals('col') %>%
   adorn_pct_formatting() %>%
   adorn_ns() %>%

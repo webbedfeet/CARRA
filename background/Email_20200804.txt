@@ -1,0 +1,52 @@
+Hi Abhijit
+
+
+
+I hope you are doing well. I reviewed the results with our larger writing group and a few questions came up.
+
+
+
+1. We see the age range for patients is 0-20. It's very unlikely that there is an infant with lupus. Can you look into this for us and let us know more about that?
+
+
+I'm looking at the variable `dxdage` from the file dem_data_2020-01-31_1545.csv. Out
+of the 677 individuals in the study, one has a recorded age of 0, 1 a recorded age of 1, and 11 have ages less than 5
+
+
+
+
+2. The Kaplan Meyer curve looks like it is saying 65% get nephritis but it's 35% that did and 65% that did not get nephritis. Am I reading that correctly?
+
+There are 2 Kaplan-Meier curves presented. The first one looked at individuals diagnosed with LN and looks at time till LN from SLE diagnosis. The second is what you are probably referring to.
+
+The Kaplan-Meier curve provides the best statistical estimate of what
+we would see if we observed all subjects forward over time without losing anyone,
+i.e., no censoring. Unfortunately, in this case we have substantial censoring.
+We lose 100 subjects after the 1st year before we observe any of them to have
+nephritis, another 156 at the end of the 2nd year post diagnosis and so on. The
+Kaplan-Meier curve assumes that some of these individuals will develop nephritis
+later and accounts for them in the estimated curve. In the presence of censoring,
+the observed number of events over a time interval is always an underestimate of
+the actual number of events in that interval.
+
+The KM curve estimates that we would see around 63% of our initial subjects have nephritis if we observed all of them for 9 years. This reflects both what we observe
+and what we don't observe.
+
+BTW, the correct spelling is Meier, not Meyer.
+
+3. For principle 4, I know the Fischer extact test for remission of black vs non black was not statistically significant but can you give us the pvalue to report?
+
+The p-value for the Fisher exact tes is 0.053
+
+
+4. For principle 5, do we have a p-value for the change in GFR by initial stage?
+
+0.4572 by Fisher exact test
+
+5. For principle 6, These numbers suggest quite a few patients were on ritux + cytoxan + MMF – can we get that number for the text? (not needed in the table)
+
+Among LN patients, there are 38 individuals who received Rituxan, Cytoxan and Cellcept
+
+Thank you so much for your help!
+
+Kathleen
