@@ -23,7 +23,7 @@ ln_visit <- vroom(here('data/raw/vis_data_2020-01-31_1545.csv'),
   clean_names(case = 'snake') %>%
   rename(visit = folder_name)
 
-raw_biopsy <- rio::import(here('data/raw/biopsy_data_2020-01-31_1545.csv')) %>%
+raw_biopsy <- rio::import(here('data/raw/biopsy_data_2020-01-31_1545.csv'), setclass = 'tbl') %>%
   clean_names(case='snake') %>%
   select(subject_id, visit = folder_name, event_index, biopdtc_yyyy, biopsdtc_yyyy,
          matches('[who|isnrps][2-6]$'))
@@ -47,3 +47,22 @@ raw_biopsy <- raw_biopsy %>%
          LN50 = ifelse(LN5==1 & LN3==0 & LN4==0, 1, 0))
 
 saveRDS(raw_biopsy, file = here('data/rda/biopsy_classes.rds'), compress=T)
+
+
+# Updated definition, more explicit ---------------------------------------
+
+
+raw_biopsy1 <- raw_biopsy %>%
+  filter_at(vars(isnrps2:who6), complete.cases) %>%
+  rowwise() %>%
+  mutate(LN = sum(c_across(isnrps2:who5)),
+         LN2 = sum(c(isnrps2, who2)),
+         LN3 = sum(c(isnrps3, who3)),
+         LN4 = sum(c(isnrps4, who4)),
+         LN5 = sum(c(isnrps5, who5))) %>%
+  mutate(across(starts_with('LN'), ~ifelse(. > 0, 1, 0))) %>%
+  # Create 3 exclusive classes: LN 3/4 only, LN 3/4+5, and LN5 only
+  mutate(LN34 = ifelse((LN3==1 | LN4==1) & LN5==0, 1, 0),
+         LN345 = ifelse((LN3==1 & LN5==1) | (LN4==1 & LN5==1), 1, 0),
+         LN50 = ifelse(LN5==1 & LN3==0 & LN4==0, 1, 0))
+saveRDS(raw_biopsy1, file = here('data/rda/biopsy_classes1.rds'))
