@@ -458,7 +458,11 @@ filter_fn <- function(d){
 raw_biopsy <- raw_biopsy %>%
   mutate(newdata = map(data, filter_fn)) %>%
   select(-data) %>%
-  unnest(cols = c(newdata))
+  unnest(cols = c(newdata)) %>%
+  select(-(LN34:LN50))
+
+LN_class_person <- readRDS(here('data/rda/LN_classes1.rds'))
+raw_biopsy <- raw_biopsy %>% left_join(LN_class_person %>% select(subject_id, LN34:LN50))
 
 ## Fix event_index for subject 139, 6 month visit
 all_subjects$event_index[all_subjects$subject_id==139 &
@@ -495,7 +499,17 @@ saveRDS(prin4, here('data/rda/prin4.rds'))
 
 all_rows <- vroom(here('data/raw/all_rows_data_2020-01-31_1545.csv'))
 LN_classes <- map(2:5, compute_classes) %>%
-  Reduce(left_join, .)
+  Reduce(left_join, .) %>%
+  rowwise() %>%
+  mutate(LN = ifelse(sum(c_across(LN2:LN5)) > 0, 1, 0)) %>%
+  ungroup() %>%
+  clean_names('snake')
+
+ln_ids <- LN_classes %>% group_by(subject_id) %>%
+  summarize(ln = ifelse(any(ln==1, na.rm=T), 1, 0)) %>%
+  filter(ln==1) %>% select(subject_id)
+
+pct_single <- LN_classes %>% semi_join(ln_ids) %>% count(subject_id) %>% tabyl(n) %>% adorn_pct_formatting() %>% .[1,3]
 
 #' There are a total of `r length(unique(raw_biopsy$subject_id[raw_biopsy$LN==1]))` LN
 #' positive subjects in this study. Among these individuals, many are missing
@@ -513,7 +527,8 @@ prin4 %>%
   kable(digits = 1, caption = 'Percent missing data by outcome and visit') %>%
   kable_styling()
 
-#' Also, 20 percent of LN+ subjects had only 1 available visit, so any change
+
+#' Also,  `r pct_single` of LN+ subjects had only 1 available visit, so any change
 #' is not observable
 prin4 %>% count(subject_id) %>% tabyl(n) %>%
   mutate(n = as.character(n)) %>%
