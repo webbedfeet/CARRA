@@ -3,9 +3,6 @@ title: "CARRA Analysis"
 author: "Abhijit Dasgupta, PhD"
 date: "`r format(Sys.time(), '%B %d, %Y %I:%m %p')`"
 output:
-  word_document:
-    toc: yes
-    toc_depth: '3'
   html_document:
     css: style.css
     toc: yes
@@ -16,6 +13,9 @@ output:
     theme: sandstone
     highlight: zenburn
     code_folding: hide
+  word_document:
+    toc: yes
+    toc_depth: '3'
 ---
 
 
@@ -85,7 +85,7 @@ slicc_info <- vroom(here('data/raw/slicc_data_2020-01-31_1545.csv'),
                     col_select = c(subjectId, visit = folderName,
                                    SLICC00)) %>%
   clean_names()
-raw_biopsy <- readRDS(here('data/rda/biopsy_classes.rds')) # see biopsy_classes.R
+raw_biopsy <- readRDS(here('data/rda/biopsy_classes1.rds')) # see biopsy_classes.R
 total_ln <- raw_biopsy %>%
   group_by(subject_id) %>%
   summarize(LN = ifelse(any(LN==1, na.rm=T), 1, 0)) %>%
@@ -151,7 +151,7 @@ pdis <- vroom(here('data/raw/pdisease_data_2020-01-31_1545.csv')) %>%
   group_by(subject_id) %>%
   summarize(dxdt = min(dxdt_yyyy, na.rm=T)) %>%
   ungroup()
-raw_biopsy <- readRDS(here('data/rda/biopsy_classes.rds')) %>%
+raw_biopsy <- readRDS(here('data/rda/biopsy_classes1.rds')) %>%
   select(subject_id, visit, event_index, biopdtc_yyyy, biopsdtc_yyyy, LN) %>%
   filter(LN==1) %>%
   group_by(subject_id) %>%
@@ -246,13 +246,13 @@ of LN classes in this dataset
 
 ```{r ln_classes}
 
-raw_biopsy <- readRDS(here('data/rda/biopsy_classes.rds'))
+raw_biopsy <- readRDS(here('data/rda/biopsy_classes1.rds'))
 LN_classes <- raw_biopsy %>%
   group_by(subject_id) %>%
   summarise_at(vars(starts_with("LN")),
                ~ifelse(any(. == 1), 1, 0)) %>%
   ungroup()
-saveRDS(LN_classes, here('data/rda/LN_classes.rds'), compress=T)
+saveRDS(LN_classes, here('data/rda/LN_classes1.rds'), compress=T)
 
 LN_classes %>% mutate(LN=ifelse(is.na(LN), 'No', 'Yes')) %>%
   tabyl(LN) %>%
@@ -308,7 +308,7 @@ visits <- vroom(here('data/raw/visit.list_data_2020-01-31_1545.csv')) %>%
   clean_names(case='snake') %>%
   select(subject_id, event_index, visit = event_type, visit_date)
 
-raw_biopsy <- readRDS(here('data/rda/biopsy_classes.rds')) %>%
+raw_biopsy <- readRDS(here('data/rda/biopsy_classes1.rds')) %>%
   select(subject_id:event_index, starts_with('biop'), starts_with("LN")) %>%
   filter(LN==1) %>%
   nest(-subject_id)
@@ -686,18 +686,18 @@ MEDCATON = 30
 ```{r rtx}
 # Principle 6 -------------------------------------------------------------
 
-raw_biopsy <- readRDS(here('data/rda/biopsy_classes.rds')) # Updated for LN34+5 class
+raw_biopsy <- readRDS(here('data/rda/biopsy_classes1.rds')) # Updated for LN34+5 class
 all_rows <- vroom(here('data/raw/all_rows_data_2020-01-31_1545.csv'))
 ritux <- all_rows %>% filter(conceptValue=='Rituximab (Rituxan)') %>%
   clean_names() %>%
   select(subject_id, ritux = concept_value) %>%
   distinct()
 ## LN_classes was created in Principle 3
-LN_classes <- readRDS(here('data/rda/LN_classes.rds'))
+LN_classes <- readRDS(here('data/rda/LN_classes1.rds'))
 tab_rtx_ln <- LN_classes  %>%
   left_join(ritux) %>%
   mutate(Rituximab = ifelse(is.na(ritux), 'No','Yes'),
-         LN = ifelse(is.na(LN),'Neg', 'Pos')) %>%
+         LN = ifelse(LN==0,'Neg', 'Pos')) %>%
   tabyl(Rituximab, LN)
 tab_rtx_ln %>%
   adorn_percentages('col') %>%
