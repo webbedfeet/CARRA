@@ -23,7 +23,7 @@ ln_visit <- vroom(here('data/raw/vis_data_2020-01-31_1545.csv'),
   clean_names(case = 'snake') %>%
   rename(visit = folder_name)
 
-raw_biopsy <- vroom(here('data/raw/biopsy_data_2020-01-31_1545.csv')) %>%
+raw_biopsy <- rio::import(here('data/raw/biopsy_data_2020-01-31_1545.csv')) %>%
   clean_names(case='snake') %>%
   select(subject_id, visit = folder_name, event_index, biopdtc_yyyy, biopsdtc_yyyy,
          matches('[who|isnrps][2-6]$'))
@@ -36,7 +36,7 @@ assertthat::are_equal(
 raw_biopsy <- raw_biopsy %>%
   filter_at(vars(isnrps2:who6), complete.cases) %>%
   mutate(LN = rowSums(.[,-(1:3)])) %>%
-  mutate(LN2 = rowSums(.[,c('isnrps3','who2')]),
+  mutate(LN2 = rowSums(.[,c('isnrps2','who2')]),
          LN3 = rowSums(.[,c('isnrps3','who3')]),
          LN4 = rowSums(.[,c('isnrps4','who4')]),
          LN5 = rowSums(.[,c('isnrps5','who5')])) %>%
