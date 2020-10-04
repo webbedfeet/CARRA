@@ -61,6 +61,7 @@ raw_biopsy1 <- raw_biopsy %>%
          LN4 = sum(c(isnrps4, who4)),
          LN5 = sum(c(isnrps5, who5))) %>%
   mutate(across(starts_with('LN'), ~ifelse(. > 0, 1, 0))) %>%
+  ungroup() %>%
   # Create 3 exclusive classes: LN 3/4 only, LN 3/4+5, and LN5 only
   mutate(LN34 = ifelse((LN3==1 | LN4==1) & LN5==0, 1, 0),
          LN345 = ifelse((LN3==1 & LN5==1) | (LN4==1 & LN5==1), 1, 0),
