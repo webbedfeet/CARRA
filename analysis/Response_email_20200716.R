@@ -71,7 +71,8 @@ age <- vroom(here('data/raw/visit.list_data_2020-01-31_1545.csv')) %>%
   clean_names() %>%
   select(subject_id, event_type, visage) %>%
   filter(event_type=='Baseline') %>%
-  distinct()
+  distinct() %>%
+  mutate(visage = ifelse(subject_id==26, 10, visage)) # correspondence on 2020-08-14
 
 demographics <- readRDS(here('data/rda/demographic.rds'))
 
