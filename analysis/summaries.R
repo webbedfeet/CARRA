@@ -26,7 +26,7 @@ for(f in dir_ls(here("lib/R"), glob = "*.R")){
 }
 
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE,
-                      cache = T)
+                      cache = F)
 # all_subjects <- vroom(here('data/raw/all_rows_data_2020-01-31_1545.csv'),
 #                       col_select = c(subjectId, visit = folderName, eventIndex)) %>%
 #   distinct() %>%
@@ -71,7 +71,7 @@ slicc_info <- vroom(here('data/raw/slicc_data_2020-01-31_1545.csv'),
                     col_select = c(subjectId, visit = folderName,
                                    SLICC00)) %>%
   clean_names()
-raw_biopsy <- readRDS(here('data/rda/biopsy_classes.rds')) # see biopsy_classes.R
+raw_biopsy <- readRDS(here('data/rda/biopsy_classes1.rds')) # see biopsy_classes.R
 total_ln <- raw_biopsy %>%
   group_by(subject_id) %>%
   summarize(LN = ifelse(any(LN==1, na.rm=T), 1, 0)) %>%
@@ -132,7 +132,7 @@ pdis <- vroom(here('data/raw/pdisease_data_2020-01-31_1545.csv')) %>%
   group_by(subject_id) %>%
   summarize(dxdt = min(dxdt_yyyy, na.rm=T)) %>%
   ungroup()
-raw_biopsy <- readRDS(here('data/rda/biopsy_classes.rds')) %>%
+raw_biopsy <- readRDS(here('data/rda/biopsy_classes1.rds')) %>%
   select(subject_id, visit, event_index, biopdtc_yyyy, biopsdtc_yyyy, LN) %>%
   filter(LN==1) %>%
   group_by(subject_id) %>%
@@ -270,20 +270,43 @@ urine <- urine %>%
   select(subjectId, visit = folderName, DIPSTICK, PROT30, URINRATO, RATIOUNT, SPOTURIN) %>%
   clean_names()
 
-raw_biopsy <- readRDS(here('data/rda/biopsy_classes.rds')) %>%
-  select(subject_id, visit, LN, LN34, LN345, LN50)
+raw_biopsy <- readRDS(here('data/rda/biopsy_classes1.rds')) %>%
+  select(subject_id, visit, LN, LN3, LN4, LN5, LN34, LN345, LN50)
 LN_subjects <- raw_biopsy %>%
   group_by(subject_id) %>%
   summarize(LN_ind = any(LN==1, na.rm=T)) %>%
   filter(LN_ind)
+LN_classes <- raw_biopsy %>%
+  group_by(subject_id) %>%
+  summarise_at(vars(starts_with("LN")),
+               ~ifelse(any(. == 1), 1, 0)) %>%
+  ungroup()
+# There are edge cases where multiple biopsies have led to different
+# LN classes. I'm taking the "any" approach in that the person's final
+# class is based on all biopsies and any classes resulting from those
+# biopsies
+LN_classes <- LN_classes %>%
+  filter(!is.na(LN)) %>%
+  mutate(
+    LN34 = ifelse((LN3==1 | LN4==1) & (LN5==0), 1, 0),
+    LN345 = ifelse((LN3==1 & LN5==1) | (LN4==1 & LN5==1), 1, 0),
+    LN50 = ifelse(LN5==1 & LN3==0 & LN4==0, 1, 0)
+  )
+saveRDS(LN_classes, here('data/rda/LN_classes1.rds'), compress=T)
+
+
 d <- urine %>% select(subject_id, visit, urinrato, ratiount, spoturin) %>%
-  right_join(raw_biopsy) %>% semi_join(LN_subjects) %>%
+  right_join(LN_classes) %>% semi_join(LN_subjects) %>%
   mutate(spoturin = ifelse(spoturin=='Not Done', NA, spoturin))
 
 d <- d %>%
-  mutate(visit_no = as.numeric(str_remove(visit, ' month'))) %>%
-  mutate(visit_no = ifelse(visit=='Baseline', 0, visit_no),
-         visit_no = ifelse(visit=='Unsch', 100, visit_no)) %>%
+  mutate(visit1 = as.character(visit)) %>%
+  mutate(visit1 = ifelse(visit1 == 'Baseline', 'Baseline0', visit1)) %>%
+  mutate(visit1 = ifelse(visit1 == 'Unsch', 'Unsch100', visit1)) %>%
+  mutate(visit_no = parse_number(visit1)) %>%
+  # mutate(visit_no = as.numeric(str_remove(visit, ' month'))) %>%
+  # mutate(visit_no = ifelse(visit=='Baseline', 0, visit_no),
+         # visit_no = ifelse(visit=='Unsch', 100, visit_no)) %>%
   mutate(visit = fct_reorder(visit, visit_no))
 
 d1 <- d %>% filter(LN==1) %>%
@@ -370,32 +393,23 @@ d2_anova = d2 %>% filter(LN_class != 'Other') %>%
 #'
 #+ ln_classes
 
-raw_biopsy <- readRDS(here('data/rda/biopsy_classes.rds'))
-LN_classes <- raw_biopsy %>%
-  group_by(subject_id) %>%
-  summarise_at(vars(starts_with("LN")),
-               ~ifelse(any(. == 1), 1, 0)) %>%
-  ungroup()
-saveRDS(LN_classes, here('data/rda/LN_classes.rds'), compress=T)
+# raw_biopsy <- readRDS(here('data/rda/biopsy_classes1.rds'))
+# LN_classes <- raw_biopsy %>%
+  # group_by(subject_id) %>%
+  # summarise_at(vars(starts_with("LN")),
+               # ~ifelse(any(. == 1), 1, 0)) %>%
+  # ungroup()
 
-LN_classes %>% mutate(LN=ifelse(is.na(LN), 'No', 'Yes')) %>%
+LN_classes <- read_rds(here('data/rda/LN_classes1.rds'))
+
+LN_classes %>% mutate(LN=ifelse(LN==0, 'No', 'Yes')) %>%
   tabyl(LN) %>%
   adorn_totals() %>%
   adorn_pct_formatting() %>%
   kable(caption = 'Lupus nephritis frequency') %>%
   kable_styling()
 
-# There are edge cases where multiple biopsies have led to different
-# LN classes. I'm taking the "any" approach in that the person's final
-# class is based on all biopsies and any classes resulting from those
-# biopsies
-LN_classes <- LN_classes %>%
-  filter(!is.na(LN)) %>%
-  mutate(
-    LN34 = ifelse((LN3==1 | LN4==1) & (LN5==0), 1, 0),
-    LN345 = ifelse((LN3==1 & LN5==1) | (LN4==1 & LN5==1), 1, 0),
-    LN50 = ifelse(LN5==1 & LN3==0 & LN4==0, 1, 0)
-  )
+
 LN_classes %>%
   select(LN34:LN50) %>%
   rename(`III/IV` = LN34,
@@ -426,7 +440,7 @@ visits <- vroom(here('data/raw/visit.list_data_2020-01-31_1545.csv')) %>%
   clean_names(case='snake') %>%
   select(subject_id, event_index, visit = event_type, visit_date)
 
-raw_biopsy <- readRDS(here('data/rda/biopsy_classes.rds')) %>%
+raw_biopsy <- readRDS(here('data/rda/biopsy_classes1.rds')) %>%
   select(subject_id:event_index, starts_with('biop'), starts_with("LN")) %>%
   filter(LN==1) %>%
   nest(-subject_id)
@@ -828,18 +842,18 @@ tab_gfr_remission %>%
 #+ rtx
 # Principle 6 -------------------------------------------------------------
 
-raw_biopsy <- readRDS(here('data/rda/biopsy_classes.rds')) # Updated for LN34+5 class
+raw_biopsy <- readRDS(here('data/rda/biopsy_classes1.rds')) # Updated for LN34+5 class
 all_rows <- vroom(here('data/raw/all_rows_data_2020-01-31_1545.csv'))
 ritux <- all_rows %>% filter(conceptValue=='Rituximab (Rituxan)') %>%
   clean_names() %>%
   select(subject_id, ritux = concept_value) %>%
   distinct()
 ## LN_classes was created in Principle 3
-LN_classes <- readRDS(here('data/rda/LN_classes.rds'))
+LN_classes <- readRDS(here('data/rda/LN_classes1.rds'))
 tab_rtx_ln <- LN_classes  %>%
   left_join(ritux) %>%
   mutate(Rituximab = ifelse(is.na(ritux), 'No','Yes'),
-         LN = ifelse(is.na(LN),'Neg', 'Pos')) %>%
+         LN = ifelse(LN==0,'Neg', 'Pos')) %>%
   tabyl(Rituximab, LN)
 tab_rtx_ln %>%
   adorn_percentages('col') %>%
