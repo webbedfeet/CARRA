@@ -1,6 +1,6 @@
 # Extract demographic data
 library(pacman)
-p_load(char = c('tidyverse','broom','vroom'))
+p_load(char = c('tidyverse','broom','vroom','here', 'janitor'))
 
 demographic <- vroom(here('data/raw/dem_data_2020-01-31_1545.csv')) %>%
   clean_names() %>%

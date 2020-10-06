@@ -479,13 +479,18 @@ prin4 <- all_subjects %>%
   filter(str_detect(visit, regex('Baseline|month|Unsch'))) %>%
   distinct()
 
+# Restrict to LN+
+prin4 <- prin4 %>% semi_join(raw_biopsy %>% select(subject_id))
+
 prin4 <- prin4 %>%
   mutate(first_ln = ifelse(LN==1, 1, 0)) %>%
   filter_at(vars(creatval:first_ln), any_vars(!is.na(.))) %>%
   filter(!is.na(event_index))
 
 ## Only LN patients
-ln_ids <- prin4 %>% filter(LN==1) %>% pull(subject_id) %>% unique()
+# ln_ids <- prin4 %>% filter(LN==1) %>% pull(subject_id) %>% unique()
+ln_ids <- raw_biopsy$subject_id
+
 prin4 <- prin4 %>%
   filter(subject_id %in% ln_ids) %>%
   mutate(first_ln = ifelse(first_ln==0, NA, first_ln)) %>%
@@ -497,15 +502,17 @@ prin4 <- prin4 %>%
 
 saveRDS(prin4, here('data/rda/prin4.rds'))
 
+source(here('lib/R/compute_classes.R'))
 all_rows <- vroom(here('data/raw/all_rows_data_2020-01-31_1545.csv'))
-LN_classes <- map(2:5, compute_classes) %>%
+LN_classes1 <- readRDS(here('data/rda/LN_classes1.rds'))
+LN_classes_obs <- map(2:5, compute_classes) %>%
   Reduce(left_join, .) %>%
   rowwise() %>%
   mutate(LN = ifelse(sum(c_across(LN2:LN5)) > 0, 1, 0)) %>%
   ungroup() %>%
   clean_names('snake')
 
-ln_ids <- LN_classes %>% group_by(subject_id) %>%
+ln_ids <- LN_classes_obs %>% group_by(subject_id) %>%
   summarize(ln = ifelse(any(ln==1, na.rm=T), 1, 0)) %>%
   filter(ln==1) %>% select(subject_id)
 
@@ -528,7 +535,7 @@ prin4 %>%
   kable_styling()
 
 
-#' Also,  `r pct_single` of LN+ subjects had only 1 available visit, so any change
+  #' Also,  `r pct_single` of LN+ subjects had only 1 available visit, so any change
 #' is not observable
 prin4 %>% count(subject_id) %>% tabyl(n) %>%
   mutate(n = as.character(n)) %>%

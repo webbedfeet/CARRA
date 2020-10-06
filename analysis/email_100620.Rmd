@@ -1,0 +1,139 @@
+---
+title: 10/6/2020 updates
+author: Abhijit Dasgupta
+date: "`r format(Sys.time(), '%B %d, %Y %I:%m %p')`"
+output:
+  prettydoc::html_pretty:
+    theme: architect
+    #toc: false
+    #toc_depth: 3
+    #toc_float:
+      #collapsed: true
+      #smooth_scroll: false
+    #theme: yeti
+    highlight: zenburn
+    css: style.css
+    self_contained: true
+
+---
+
+```{r setup, include=F}
+pacman::p_load(char=c('tidyverse','janitor','broom','tableone', 'here', 'vroom', 'table1'))
+knitr::opts_chunk$set(message=F, warning=F, echo=FALSE)
+```
+
+::: {.query}
+For the demographics table we have from the prior analysis, there are a total of 677 subjects. In the new analysis, there are 675 subjects. Did we lose two subjects? Are there 2 where it is unclear of their LN status? Do we need a new demographics table to reflect 675 subjects?
+:::
+
+I have normalized this table to the 675 patients for whom we have biopsy data
+
+```{r, echo=FALSE}
+age <- vroom(here('data/raw/visit.list_data_2020-01-31_1545.csv')) %>%
+  clean_names() %>%
+  select(subject_id, event_type, visage) %>%
+  filter(event_type=='Baseline') %>%
+  distinct() %>%
+  mutate(visage = ifelse(subject_id==26, 10, visage)) # correspondence on 2020-08-14
+
+demographics <- readRDS(here('data/rda/demographic.rds'))
+
+dat <- age %>% left_join(demographics, by='subject_id') %>%
+  mutate(time_since_dx = visage - dxdage)
+
+races <- dat %>%
+  select(white, black, asian, amerind, mideast, nathwn, othrace) %>%
+  rowwise() %>%
+  mutate(present = sum(c_across(everything()))) %>%
+  mutate(missing = ifelse(present==0, 1,0)) %>%
+  mutate(mixed = ifelse(present >1, 1, 0)) %>%
+  select(-present) %>% ungroup() %>%
+  bind_cols(subject_id=dat$subject_id)
+
+races[races$mixed==1, select(races, white:othrace) %>% names()] = 0
+
+races_tab <- races %>%
+  pivot_longer(cols = -subject_id,
+               names_to = 'race', values_to = 'indic') %>%
+  filter(indic != 0) %>%
+  mutate(race = str_to_title(race)) %>%
+  mutate(race = ifelse(race=='Missing', NA, race)) %>%
+  mutate(race = fct_infreq(race)) %>%
+  mutate(race = fct_lump_min(race, min=15, other_level = 'Other race')) %>%
+  tabyl(race) %>%
+  adorn_pct_formatting()
+
+races2 <- races %>%
+  pivot_longer(cols = c(-subject_id),
+               names_to = 'race', values_to = 'indic') %>%
+  filter(indic != 0) %>%
+  mutate(race = str_to_title(race),
+         race = ifelse(race == 'Missing', NA, race),
+         race = fct_infreq(race),
+         race = fct_lump_min(race, min=15, other_level = 'Other race'))
+
+
+tab_race <- races %>%
+  pivot_longer(cols = c(-subject_id),
+               names_to = 'race', values_to = 'indic') %>%
+  filter(indic != 0) %>%
+  mutate(race = str_to_title(race),
+         race = ifelse(race == 'Missing', NA, race),
+         race = fct_infreq(race),
+         race = fct_lump_min(race, min=15, other_level = 'Other race')) %>%
+  tabyl(race) %>%
+  adorn_pct_formatting()
+
+tab_race_eth <- races %>%
+  bind_cols(hispanic = dat$hispanic) %>%
+  pivot_longer(cols = c(-subject_id, -hispanic),
+               names_to = 'race', values_to = 'indic') %>%
+  filter(indic != 0) %>%
+  mutate(hispanic = ifelse(hispanic==1, 'Hispanic','Non-hispanic')) %>%
+  mutate(race = str_to_title(race),
+         race = ifelse(race == 'Missing', NA, race),
+         race = fct_infreq(race),
+         race = fct_lump_min(race, min=15, other_level = 'Other race')) %>%
+  tabyl(race, hispanic) %>%
+  adorn_percentages() %>%
+  adorn_pct_formatting() %>%
+  adorn_ns()
+
+raw_biopsy <- readRDS(here('data/rda/biopsy_classes1.rds'))
+dat1 <- dat %>% left_join(races2 %>% select(-indic)) %>%
+  mutate(hispanic = factor(ifelse(hispanic==1, 'Hispanic', 'Non-hispanic'))) %>% 
+  semi_join(raw_biopsy %>% select(subject_id))
+
+label(dat1$sex) = 'Sex'
+label(dat1$visage) = "Age at enrollment"
+label(dat1$time_since_dx) = "Time since diagnosis"
+label(dat1$race) = 'Race'
+label(dat1$hispanic) = 'Ethnicity'
+
+units(dat1$time_since_dx) = 'years'
+units(dat1$visage) = 'years'
+
+table1::table1(~ visage + sex + race + hispanic + time_since_dx, data=dat1)
+
+```
+
+::: {.query}
+For principle 4, we had several p-values reported. Have those been updated to reflect the reanalysis? The p-values we had previously were:
+
+1.  Black LN patients had worse renal outcomes compared to White patients, including increased progression to Stage 3, 4, or 5 CKD (9.8% of Black patients compared to 2.4% of White patients, p=0.04).
+1. Achievement of remission black vs non-black p-value 
+:::
+
+
+::: {.query}
+Similarly for principle 5, we had a couple of p-values that I suspect need updating:
+
+1. For patients who had a recorded eGFR >60 at diagnosis (n=38), 13 (34.2%) achieved remission; in comparison, for patients with eGFR recorded as 30-60 at diagnosis (n=8), 1 (12.5%) achieved remission (see Figure 2); neither of the 2 patients with eGFR <30 at diagnosis achieved remission, and these differences were not statistically significant (p= 0.45).
+1. For patients with multiple recorded eGFRs, of those with an initial eGFR >60 (n=114), 109 (95.6%), 5 (4.4%) progressed to stage 3-5 CKD.  Whereas of the 9 patients with an initial eGFR <60, 2 (22.2%) continued to have an eGFR <60 (p=0.46). 
+:::
+
+
+::: {.query}
+For principle 6, we had made a table comparing usage of rituximab and other medications only in patients with lupus nephritis. Can you make this table again based on the reanalysis? I don’t see it in the github. For reference, this is the prior table: 
+:::
+
