@@ -19,7 +19,7 @@
 library(pacman)
 p_load(char = c('readxl','tidyverse','data.table','glue','fs','here',
                 'knitr','kableExtra', 'vroom', 'janitor'))
-#source(here('lib/R/pval_scientific.R'))
+source(here('lib/R/pval_scientific.R'))
 for(f in dir_ls(here("lib/R"), glob = "*.R")){
   message(paste("Loading", basename(f)))
   source(f)
@@ -432,7 +432,7 @@ LN_classes %>%
 #' as stratifying variables
 #'
 #+ outcomes
-source('Principle4.R')
+source(here('analysis/Principle4.R'))
 
 pct_single <- prin4 %>%
   count(subject_id) %>%
@@ -468,17 +468,19 @@ prin4 %>% count(subject_id) %>% tabyl(n) %>%
         digits=2) %>%
   kable_styling(full_width = F)
 
-#' > The information available for subject 597 showed that diagnosis
-#' > was at an unscheduled visit, and where that visit was temporally
-#' > between baseline, 6 month and 12 month visit was not available. So
-#' > this subject was removed from the analysis since the number of
-#' > visits post diagnosis could not be definitively computed for
-#' > that subject.
+#' > ~~The information available for subject 597 showed that diagnosis~~
+#' > ~~was at an unscheduled visit, and where that visit was temporally~~
+#' > ~~between baseline, 6 month and 12 month visit was not available. So~~
+#' > ~~this subject was removed from the analysis since the number of~~
+#' > ~~visits post diagnosis could not be definitively computed for~~
+#' > ~~that subject.~~
+#' > The timing of subject 597's diagnosis was determined from the date of biopsy.
 #'
 #' ### GFR changes
 #'
 #+ gfr_change_black
 
+## Identify subjects with more than one GFR class data
 gfr_id <- prin4 %>%
   filter(!is.na(gfr_class)) %>%
   count(subject_id) %>%
@@ -490,11 +492,12 @@ prin4 %>%
   filter(!is.na(gfr_class)) %>%
   arrange(subject_id,event_index) %>%
   group_by(subject_id) %>%
+  filter(event_index %in% range(event_index)) %>%
   mutate(first_visit = visit[event_index == min(event_index)],
          last_visit = visit[event_index==max(event_index)],
          egfr_visit = ifelse(event_index == min(event_index), 'First','Last'),
          black = ifelse(black==1, 'Black','Non-black')) %>%
-  filter(event_index==min(event_index)|event_index==max(event_index)) %>%
+  # filter(event_index==min(event_index)|event_index==max(event_index)) %>%
   ungroup() %>%
   select(subject_id, black, first_visit, last_visit,
          egfr_visit, gfr_class) %>%
@@ -509,29 +512,44 @@ kable(tabs$`Non-black`, caption = 'Change in GFR stage among non-blacks') %>%
 
 #+ permutation, cache=TRUE
 ## Permutation test
+library(infer)
 
-if(!file.exists('worse.rds')){
-  worse = rep(0, 1000)
-  set.seed(1034)
-  for(i in 1:5000){
-    # print(i)
-    worse[i] <- tmp %>%
-      mutate(bl = sample(black)) %>%
-      filter(bl=='Black') %>%
-      count(First, Last) %>%
-      filter(First=='Stage 1', Last != 'Stage 1') %>%
-      pull(n) %>%
-      sum()
-  }
-  saveRDS(worse,'worse.rds')
-} else{
-  worse <- readRDS('worse.rds')
-}
+d1 <- tmp %>%
+  mutate(y = factor(ifelse(First=='Stage 1' & Last != 'Stage 1', 1, 0)))
+set.seed(10343857)
+null_dist <- d1 %>% specify(y~black, success='1') %>%
+  hypothesise(null='independence') %>%
+  generate(reps=5000, type='permute') %>%
+  calculate(stat='diff in props',
+            order = c('Black','Non-black'))
+obs <- d1 %>% specify(y ~ black, success='1') %>%
+  calculate(stat = 'diff in props',
+            order = c('Black','Non-black'))
+
+p_val <- null_dist %>% get_p_value(obs_stat = obs, direction = 'greater')
+
+# if(!file.exists('worse.rds')){
+#   worse = rep(0, 1000)
+#   set.seed(1034)
+#   for(i in 1:5000){
+#     # print(i)
+#     worse[i] <- tmp %>%
+#       mutate(bl = sample(black)) %>%
+#       filter(bl=='Black') %>%
+#       count(First, Last) %>%
+#       filter(First=='Stage 1', Last != 'Stage 1') %>%
+#       pull(n) %>%
+#       sum()
+#   }
+#   saveRDS(worse,'worse.rds')
+# } else{
+#   worse <- readRDS('worse.rds')
+# }
 
 #' We can perform a permutation test to see if blacks do worse than non-blacks
 #' insofar as the chance of worsening GFR state if the initial GFR state was Stage 1
 #' at time of LN diagnosis. Using 5000 permutations of black status, we find
-#' that the permutation test gives a p-value of `r round(mean(worse >= 4), 2)`,
+#' that the permutation test gives a one-sided p-value of `r round(p_val, 2)`,
 #' thus showing some evidence that blacks tend to worsen at a higher rate than
 #' non-blacks.
 #'
@@ -589,7 +607,7 @@ prin4 %>% mutate(black = ifelse(black==1, 'Yes','No')) %>%
   kable() %>%
   kable_styling()
 
-#'
+  #'
 #' We will now just look at individuals who were not in remission state at diagnosis
 
 remission_id <- prin4 %>%
@@ -622,28 +640,30 @@ tbl_black_remission %>%
   kable() %>%
   kable_styling()
 
-#' This is not statistically significant using Fisher's test
+#' This is not statistically significant using Fisher's test (p-value =
+#' `r round(tbl_black_remission %>% fisher.test() %>% .[['p.value']],2)`)
 #'
 #' ### Dialysis, transplant and ESRD
 #'
 #' All these outcomes are sparse in this data set, even on restricting to
-#' subjects who have been diagnosed with lupus nephritis
+#' subjects who have been diagnosed with lupus nephritis. (Denominator is
+#' all visits on and after being diagnosed with LN)
 
 prin4 %>%
   tabyl(dialysis) %>%
-  mutate_at(vars(contains('percent')), ~100*.x) %>%
+  adorn_pct_formatting() %>%
   kable(caption = 'Frequency distribution for dialysis', digits=2) %>%
   kable_styling(full_width = F)
 
 prin4 %>%
   tabyl(transplant) %>%
-  mutate_at(vars(contains('percent')), ~100*.x) %>%
+  adorn_pct_formatting() %>%
   kable(caption = 'Frequency distribution for transplant', digits=2)%>%
   kable_styling(full_width = F)
 
 prin4 %>%
   tabyl(esrd) %>%
-  mutate_at(vars(contains('percent')), ~100*.x) %>%
+  adorn_pct_formatting() %>%
   kable(caption = 'Frequency distribution for ESRD', digits=2)%>%
   kable_styling(full_width = F)
 
@@ -656,17 +676,18 @@ prin4 <- readRDS(here('data/rda/prin4.rds'))
 # We start with prin4, which only contains subjects with LN and starts
 # their time at time of diagnosis
 
-prin4 %>% group_by(subject_id) %>%
+tb1 <- prin4 %>% group_by(subject_id) %>%
   filter(event_index ==  min(event_index)) %>% # Just look at visit where LN+ diagnosed
   ungroup() %>%
-  tabyl(gfr_class) %>%
-  mutate_at(vars(contains('percent')), ~100*.x) %>%
+  tabyl(gfr_class)
+tb1 %>%
+  adorn_pct_formatting() %>%
   kable(caption = 'Distribution of GFR class at time of LN diagnosis',
         digits=2) %>%
   kable_styling()
 
-#' We see that 93% of the available GFR classes are in Stage 1, and
-#' only 7% are worse than Stage 1.
+#' We see that `r round(100*tb1$valid_percent[1],2)`% of the available GFR classes are in Stage 1, and
+#' only `r round(100*(1-tb1$valid_percent[1]),2)`% are worse than Stage 1.
 #'
 #' ### GFR changes
 #'
@@ -693,16 +714,28 @@ prin4 %>%
          egfr_visit, gfr_class) %>%
   spread(egfr_visit, gfr_class) -> tmp
 
-tabyl(dat=tmp, First, Last) %>% adorn_percentages('row') %>%
+tb2 <- tabyl(dat=tmp, First, Last)
+tb2 %>%
+  adorn_percentages('row') %>%
   adorn_pct_formatting() %>%
   adorn_ns() %>%
   adorn_title() %>%
   kable(caption = 'Changes in GFR class between diagnosis time/baseline and last visit') %>%
   kable_styling()
 
+tmp2 <- tmp %>%
+  mutate(across(First:Last, ~ifelse(.=='Stage 1', 'Stage 1','Stage 2+3')))
+tb3 <- tabyl(tmp2, First, Last)
+tb3 %>%
+  adorn_percentages('row') %>%
+  adorn_pct_formatting() %>%
+  adorn_ns() %>%
+  adorn_title() %>%
+  kable(caption = 'Changes in GFR class between diagnosis time/baseline and last visit') %>%
+  kable_styling()
 
 #' So, no one starting in Stage 2 or 3 gets worse, while 4% of people
-#' starting in Stage 1 do get worse.
+#' starting in Stage 1 do get worse (p-value = `r tb3 %>% fisher.test() %>% .[['p.value']]`)
 #'
 
 prin4 %>%
@@ -769,7 +802,7 @@ tab_gfr_remission %>%
   kable_styling()
 
 #' A Fishers exact test gives a p-value of
-#' `r tab_gfr_remission %>% fisher.test() %>% broom::tidy() %>% pull(p.value)`.
+#' `r tab_gfr_remission %>% fisher.test() %>% .[['p.value']]`.
 #'
 #' ### Dialysis, transplant and ESRD
 #'
@@ -925,7 +958,7 @@ meds <- vroom(here('data/raw/meds_data_2020-01-31_1545.csv'),
 
 blah <- LN_classes %>% left_join(ritux) %>% left_join(meds) %>%
   distinct()
-blah1 <- blah %>% filter(!is.na(LN))
+blah1 <- blah %>% filter(LN==1)
 
 tab_rtx_med_overall <- blah %>%
   filter(medication != 'Rituximab (Rituxan)') %>%
