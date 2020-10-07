@@ -49,13 +49,18 @@ prin4 <- all_subjects %>%
       mutate(visit = as.character(visit)) %>%
       select(-event_index)
   ) %>%
+  # left_join(
+  #   raw_biopsy %>%  # visit-level LN status
+  #     select(subject_id, visit, LN)
+  # ) %>%
   left_join(
     ln_classes %>%  # LN classes (person)
-      select(subject_id, LN,LN34:LN50)
+      select(subject_id,LN34:LN50)
   ) %>%
   left_join(
     first_ln   # First visit of LN dx
   ) %>%
+  distinct() %>%
   filter(!is.na(first_index)) %>%
   relocate(first_index, .after=event_index) %>%
   group_by(subject_id) %>%
