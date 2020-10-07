@@ -432,93 +432,15 @@ LN_classes %>%
 #' as stratifying variables
 #'
 #+ outcomes
-all_subjects <- readRDS(here('data/rda/all_subjects.rds'))
-demographic <- readRDS(here('data/rda/demographic.rds')) # computed below
-short_outcomes <- readRDS(here('data/rda/short_outcomes.rds')) %>%
-  mutate(visit = as.character(visit))
-visits <- vroom(here('data/raw/visit.list_data_2020-01-31_1545.csv')) %>%
-  clean_names(case='snake') %>%
-  select(subject_id, event_index, visit = event_type, visit_date)
+source('Principle4.R')
 
-raw_biopsy <- readRDS(here('data/rda/biopsy_classes1.rds')) %>%
-  select(subject_id:event_index, starts_with('biop'), starts_with("LN")) %>%
-  filter(LN==1) %>%
-  nest(-subject_id)
-filter_fn <- function(d){
-  if(nrow(d)>1){
-    d <- d %>% filter(event_index == min(event_index, na.rm=T))
-  }
-  d <- d %>% select(-starts_with('biop')) %>%
-    group_by(visit) %>%
-    summarize_at(vars(starts_with('LN')), max, na.rm=T) %>%
-    distinct() %>%
-    ungroup()
-  return(d)
-}
-raw_biopsy <- raw_biopsy %>%
-  mutate(newdata = map(data, filter_fn)) %>%
-  select(-data) %>%
-  unnest(cols = c(newdata)) %>%
-  select(-(LN34:LN50))
+pct_single <- prin4 %>%
+  count(subject_id) %>%
+  tabyl(n) %>%
+  adorn_pct_formatting() %>%
+  .[1,3]
 
-LN_class_person <- readRDS(here('data/rda/LN_classes1.rds'))
-raw_biopsy <- raw_biopsy %>% left_join(LN_class_person %>% select(subject_id, LN34:LN50))
-
-## Fix event_index for subject 139, 6 month visit
-all_subjects$event_index[all_subjects$subject_id==139 &
-                           all_subjects$visit=='6 month'] <- 2.5
-all_subjects$event_index[all_subjects$subject_id==225 &
-                           all_subjects$visit=='Unsch'] <- 2
-
-
-prin4 <- all_subjects %>%
-  left_join(demographic %>%
-              select(white:othrace, subject_id)) %>%
-  left_join(short_outcomes %>% select(-event_index)) %>%
-  left_join(raw_biopsy) %>%
-  filter(str_detect(visit, regex('Baseline|month|Unsch'))) %>%
-  distinct()
-
-# Restrict to LN+
-prin4 <- prin4 %>% semi_join(raw_biopsy %>% select(subject_id))
-
-prin4 <- prin4 %>%
-  mutate(first_ln = ifelse(LN==1, 1, 0)) %>%
-  filter_at(vars(creatval:first_ln), any_vars(!is.na(.))) %>%
-  filter(!is.na(event_index))
-
-## Only LN patients
-# ln_ids <- prin4 %>% filter(LN==1) %>% pull(subject_id) %>% unique()
-ln_ids <- raw_biopsy$subject_id
-
-prin4 <- prin4 %>%
-  filter(subject_id %in% ln_ids) %>%
-  mutate(first_ln = ifelse(first_ln==0, NA, first_ln)) %>%
-  group_by(subject_id) %>%
-  arrange(event_index) %>%
-  fill(first_ln, .direction='down') %>%
-  ungroup() %>%
-  filter(!is.na(first_ln))
-
-saveRDS(prin4, here('data/rda/prin4.rds'))
-
-source(here('lib/R/compute_classes.R'))
-all_rows <- vroom(here('data/raw/all_rows_data_2020-01-31_1545.csv'))
-LN_classes1 <- readRDS(here('data/rda/LN_classes1.rds'))
-LN_classes_obs <- map(2:5, compute_classes) %>%
-  Reduce(left_join, .) %>%
-  rowwise() %>%
-  mutate(LN = ifelse(sum(c_across(LN2:LN5)) > 0, 1, 0)) %>%
-  ungroup() %>%
-  clean_names('snake')
-
-ln_ids <- LN_classes_obs %>% group_by(subject_id) %>%
-  summarize(ln = ifelse(any(ln==1, na.rm=T), 1, 0)) %>%
-  filter(ln==1) %>% select(subject_id)
-
-pct_single <- LN_classes %>% semi_join(ln_ids) %>% count(subject_id) %>% tabyl(n) %>% adorn_pct_formatting() %>% .[1,3]
-
-#' There are a total of `r length(unique(raw_biopsy$subject_id[raw_biopsy$LN==1]))` LN
+#' There are a total of `r length(unique(prin4$subject_id))` LN
 #' positive subjects in this study. Among these individuals, many are missing
 #' information on outcomes, or multiple visits post-diagnosis of LN. For example,
 #' if we look at availability of data by visit among people who are LN+, for
@@ -535,12 +457,12 @@ prin4 %>%
   kable_styling()
 
 
-  #' Also,  `r pct_single` of LN+ subjects had only 1 available visit, so any change
+#' Also,  `r pct_single` of LN+ subjects had only 1 available visit, so any change
 #' is not observable
 prin4 %>% count(subject_id) %>% tabyl(n) %>%
   mutate(n = as.character(n)) %>%
   adorn_totals() %>%
-  mutate(percent = 100*percent) %>%
+  adorn_pct_formatting() %>%
   kable(caption = "Frequency of the number of visits per subject post LN diagnosis",
         col.names = c('Number of visits','Frequency','Percent'),
         digits=2) %>%
