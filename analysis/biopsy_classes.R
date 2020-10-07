@@ -33,21 +33,21 @@ assertthat::are_equal(
   sort(unique(rowSums(is.na(select(raw_biopsy, isnrps2:who6))))),
   c(0,10))
 
-raw_biopsy <- raw_biopsy %>%
-  filter_at(vars(isnrps2:who6), complete.cases) %>%
-  mutate(LN = rowSums(.[,-(1:3)])) %>%
-  mutate(LN2 = rowSums(.[,c('isnrps2','who2')]),
-         LN3 = rowSums(.[,c('isnrps3','who3')]),
-         LN4 = rowSums(.[,c('isnrps4','who4')]),
-         LN5 = rowSums(.[,c('isnrps5','who5')])) %>%
-  mutate_at(vars(starts_with('LN')), ~ifelse(. > 0, 1, 0)) %>%
-  # Create 3 exclusive classes: LN 3/4 only, LN 3/4+5, and LN5 only
-  mutate(LN34 = ifelse((LN3==1 | LN4==1) & LN5==0, 1, 0),
-         LN345 = ifelse((LN3==1 & LN5==1) | (LN4==1 & LN5==1), 1, 0),
-         LN50 = ifelse(LN5==1 & LN3==0 & LN4==0, 1, 0))
-
-saveRDS(raw_biopsy, file = here('data/rda/biopsy_classes.rds'), compress=T)
-
+# raw_biopsy <- raw_biopsy %>%
+#   filter_at(vars(isnrps2:who6), complete.cases) %>%
+#   mutate(LN = rowSums(.[,-(1:3)])) %>%
+#   mutate(LN2 = rowSums(.[,c('isnrps2','who2')]),
+#          LN3 = rowSums(.[,c('isnrps3','who3')]),
+#          LN4 = rowSums(.[,c('isnrps4','who4')]),
+#          LN5 = rowSums(.[,c('isnrps5','who5')])) %>%
+#   mutate_at(vars(starts_with('LN')), ~ifelse(. > 0, 1, 0)) %>%
+#   # Create 3 exclusive classes: LN 3/4 only, LN 3/4+5, and LN5 only
+#   mutate(LN34 = ifelse((LN3==1 | LN4==1) & LN5==0, 1, 0),
+#          LN345 = ifelse((LN3==1 & LN5==1) | (LN4==1 & LN5==1), 1, 0),
+#          LN50 = ifelse(LN5==1 & LN3==0 & LN4==0, 1, 0))
+#
+# saveRDS(raw_biopsy, file = here('data/rda/biopsy_classes.rds'), compress=T)
+#
 
 # Updated definition, more explicit ---------------------------------------
 
